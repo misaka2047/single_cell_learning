@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4. AnnData 与基因 ID：单细胞数据的“底盘” · 单细胞学习站</title>
+<meta name="description" content="理解 X、obs、var、layers 的分工；构建两个 AnnData；把 GSE81608 的 Entrez ID 映射成基因符号。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="anndata">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 4 步 · 45 min</div>
+  <h1>AnnData 与基因 ID：单细胞数据的“底盘”</h1>
+  <p class="chapter-lead">理解 X、obs、var、layers 的分工；构建两个 AnnData；把 GSE81608 的 Entrez ID 映射成基因符号。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="anndata">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#41-anndata">4.1 AnnData 的五个槽位</a></li><li><a href="#42-agse84133">4.2 数据集 A：GSE84133</a></li><li><a href="#43-bgse81608">4.3 数据集 B：GSE81608</a></li><li><a href="#44">4.4 为什么用稀疏矩阵</a></li><li><a href="#45">4.5 常见错误</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>能解释 AnnData 的 <code>X</code>、<code>obs</code>、<code>var</code>、<code>layers</code> 各存什么；</li>
+<li>把 GSE84133 的 4 个 CSV 合并成一个稀疏矩阵；</li>
+<li>把 GSE81608 的 Entrez GeneID 映射成 HGNC symbol；</li>
+<li>对照本章的预期输出，确认数据没有错位。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么用 AnnData，而不是一个大 DataFrame</span>
+单细胞矩阵通常是“细胞 × 基因”的稀疏矩阵：85% 以上是 0。AnnData 把<strong>表达矩阵</strong>和<strong>细胞/基因注释</strong>放在同一个对象里，并且支持 <code>layers</code> 保存原始 counts/RPKM、<code>obsm</code> 保存 PCA/UMAP。后面 Scanpy 的每个函数都围绕这个结构工作；结构错了，函数不会报错，但结果会悄悄错。</p>
+</div>
+<h2 id="41-anndata">4.1 AnnData 的五个槽位</h2>
+<table>
+<thead>
+<tr>
+<th>槽位</th>
+<th>维度</th>
+<th>本教程存什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X</code></td>
+<td>细胞 × 基因</td>
+<td>当前分析用的表达矩阵（log 后）</td>
+</tr>
+<tr>
+<td><code>obs</code></td>
+<td>细胞 × 字段</td>
+<td>donor、condition、age、sex、author_label</td>
+</tr>
+<tr>
+<td><code>var</code></td>
+<td>基因 × 字段</td>
+<td>gene symbol、是否 HVG、是否 MT</td>
+</tr>
+<tr>
+<td><code>layers</code></td>
+<td>细胞 × 基因</td>
+<td><code>counts</code> / <code>rpkm</code> / <code>lognorm</code>，保留原始值</td>
+</tr>
+<tr>
+<td><code>obsm</code></td>
+<td>细胞 × 低维</td>
+<td>PCA、UMAP</td>
+</tr>
+<tr>
+<td><code>uns</code></td>
+<td>任意</td>
+<td>数据集说明、配色、参数</td>
+</tr>
+</tbody>
+</table>
+<p>最小示例：</p>
+<pre><code class="language-python">import anndata as ad
+import pandas as pd
+from scipy.sparse import csr_matrix
+
+adata = ad.AnnData(
+    X=csr_matrix(counts),                  # cells x genes
+    obs=pd.DataFrame(metadata, index=cell_ids),
+    var=pd.DataFrame(index=gene_names),
+)
+adata.layers[&quot;counts&quot;] = adata.X.copy()    # 原始值单独留一份
+adata.var_names_make_unique()
+</code></pre>
+<h2 id="42-agse84133">4.2 数据集 A：GSE84133</h2>
+<p>每个 CSV 的列是：</p>
+<pre><code class="language-text">cell_id, barcode, assigned_cluster, A1BG, A1CF, A2M, ...
+</code></pre>
+<p>前 3 列是 metadata，第 4 列开始是 20,125 个基因的 UMI counts。代码在
+<a href="../code/00_prepare_data.py"><code>00_prepare_data.py</code></a>：</p>
+<pre><code class="language-python">df = pd.read_csv(path, dtype={0: str, 1: str, 2: str}, low_memory=False)
+obs = pd.DataFrame({
+    &quot;cell_id&quot;: df.iloc[:, 0].astype(str),
+    &quot;barcode&quot;: df.iloc[:, 1].astype(str),
+    &quot;author_label&quot;: df.iloc[:, 2].astype(str),
+    &quot;donor&quot;: meta[&quot;donor&quot;], &quot;condition&quot;: meta[&quot;condition&quot;],
+    &quot;age&quot;: meta[&quot;age&quot;], &quot;sex&quot;: meta[&quot;sex&quot;], &quot;bmi&quot;: meta[&quot;bmi&quot;],
+}, index=df.iloc[:, 0].astype(str))
+X = csr_matrix(df.iloc[:, 3:].to_numpy(dtype=np.float32))
+</code></pre>
+<p>四个样本用 <code>ad.concat(..., join="outer")</code> 合并；缺失基因填 0。</p>
+<p><strong>预期输出</strong>：</p>
+<pre><code class="language-text">reading human1 ... 1,937 cells x 20,125 genes
+reading human2 ... 1,724 cells x 20,125 genes
+reading human3 ... 3,605 cells x 20,125 genes
+reading human4 ... 1,303 cells x 20,125 genes
+wrote .../baron_raw.h5ad (8569, 20125)
+</code></pre>
+<blockquote>
+<p>8,569 = 1,937 + 1,724 + 3,605 + 1,303。论文报告 8,629 个细胞，GEO 处理后矩阵是 8,569；以你下载到的矩阵为准。</p>
+</blockquote>
+<h2 id="43-bgse81608">4.3 数据集 B：GSE81608</h2>
+<p>矩阵是“基因 × 细胞”，第一列是 <code>gene.id</code>，值是 1、2、3…，不是基因符号。它们是 <strong>Entrez GeneID</strong>；用 NCBI <code>Homo_sapiens.gene_info.gz</code> 映射：</p>
+<pre><code class="language-python">gene_info = pd.read_csv(&quot;data/Homo_sapiens.gene_info.gz&quot;, sep=&quot;\t&quot;,
+                        dtype=str, usecols=[&quot;GeneID&quot;, &quot;Symbol&quot;])
+id2sym = dict(zip(gene_info[&quot;GeneID&quot;], gene_info[&quot;Symbol&quot;]))
+symbols = [id2sym.get(str(g), f&quot;Entrez:{g}&quot;) for g in rpkm.index]
+</code></pre>
+<p>然后转置成“细胞 × 基因”：</p>
+<pre><code class="language-python">adata = ad.AnnData(
+    X=csr_matrix(rpkm.T.to_numpy(dtype=np.float32)),
+    obs=meta,
+    var=pd.DataFrame(index=symbols),
+)
+adata.layers[&quot;rpkm&quot;] = adata.X.copy()
+</code></pre>
+<p><strong>预期输出</strong>：</p>
+<pre><code class="language-text">raw matrix (39851, 1600) (genes x cells)
+mapped 37,987/39,851 Entrez IDs to symbols
+wrote .../gse81608_raw.h5ad (1600, 39851)
+</code></pre>
+<div class="callout expected">
+<p><span class="callout-title">你应该看到</span>
+- <code>baron_raw.h5ad</code>：8,569 × 20,125；
+- <code>gse81608_raw.h5ad</code>：1,600 × 39,851；
+- <code>gse81608_raw.obs</code> 有 <code>donor</code>、<code>condition</code>、<code>age</code>、<code>sex</code>、<code>author_label</code>；
+- <code>gse81608_raw.layers["rpkm"]</code> 与 <code>X</code> 相同（后续才 log2）。</p>
+</div>
+<h2 id="44">4.4 为什么用稀疏矩阵</h2>
+<p>8,569 × 20,125 的稠密 float32 约 690 MB；稀疏存储只保留非零值，通常 100–300 MB。GSE81608 更极端：39,851 个基因，大部分细胞只表达几千个。</p>
+<pre><code class="language-python">from scipy.sparse import csr_matrix
+X = csr_matrix(dense_array)   # 只存非零
+</code></pre>
+<blockquote>
+<p>但 <code>sc.pp.scale</code> 会把稀疏矩阵变稠密；所以先选 HVG（2,000 个基因）再 scale，是本教程的顺序。</p>
+</blockquote>
+<h2 id="45">4.5 常见错误</h2>
+<table>
+<thead>
+<tr>
+<th>错误</th>
+<th>后果</th>
+<th>检查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>行列转置错</td>
+<td>细胞当基因，聚类完全乱</td>
+<td><code>adata.shape</code> 应是 cells × genes</td>
+</tr>
+<tr>
+<td>obs index 与矩阵行不对应</td>
+<td>分组错位</td>
+<td><code>adata.obs_names[:3]</code> 与 CSV 第一列对齐</td>
+</tr>
+<tr>
+<td>基因名重复</td>
+<td><code>var_names</code> 不唯一，索引出错</td>
+<td><code>var_names_make_unique()</code></td>
+</tr>
+<tr>
+<td>把 RPKM 当 counts 做 CP10k</td>
+<td>双重归一化</td>
+<td>看 <code>layers</code> 和列名</td>
+</tr>
+<tr>
+<td>把 metadata 拼错顺序</td>
+<td>疾病/年龄错配</td>
+<td>用 <code>pd.concat(..., axis=1)</code> 按 index 对齐，不靠位置</td>
+</tr>
+</tbody>
+</table>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：<code>X</code> 和 <code>layers["counts"]</code> 有什么区别？为什么要留两份？</p>
+<p><strong>Q2</strong>：GSE81608 的 39,851 个“基因”里，为什么有 1,864 个没有映射到 symbol？</p>
+<p><strong>Q3</strong>：如果 <code>adata.shape</code> 是 <code>(20125, 8569)</code>，哪里错了？</p>
+<details>
+<summary>参考答案</summary>
+
+1. `X` 是当前分析矩阵（归一化/log 后），`layers` 保留原始值；DE 或重新归一化时需要原始 counts/RPKM。
+2. Entrez ID 可能已 retired、非蛋白编码、或 NCBI gene_info 中没有对应 symbol；保留 `Entrez:<id>` 避免丢失。
+3. 矩阵转置了；AnnData 约定是 cells × genes。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>结构对了，下一步做 QC：决定哪些细胞应该被删掉。你会看到，GSE84133 的 99.6% 细胞被保留，而 GSE81608 一个都不删。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/download.html"><span>上一章</span><b>3. 下载与工程化：把 GEO 变成可分析的项目</b></a><a class="pager-link next" href="../chapters/qc.html"><span>下一章</span><b>5. QC：哪些细胞应该被删掉</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

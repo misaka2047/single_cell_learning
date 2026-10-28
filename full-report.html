@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>从公共数据到可复现结论：人类胰岛单细胞图谱与 T2D 再分析</title>
+<style>
+:root { --ink:#1f2933; --muted:#5f6b7a; --line:#d9e2ec; --accent:#0b6e99; --bg:#f7f9fb; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC",
+               "Source Han Sans SC", -apple-system, BlinkMacSystemFont,
+               "Segoe UI", sans-serif;
+  line-height: 1.85; font-size: 16px;
+}
+.page {
+  max-width: 1080px; margin: 0 auto; padding: 42px 54px 80px;
+  background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.04);
+}
+h1 { font-size: 30px; line-height: 1.35; margin: 0 0 14px; color: #12344d; }
+h2 { font-size: 23px; margin: 42px 0 12px; padding-bottom: 6px;
+     border-bottom: 2px solid var(--line); color: #12344d; }
+h3 { font-size: 18px; margin: 28px 0 8px; color: #1d4e6b; }
+h4 { font-size: 16px; margin: 20px 0 6px; }
+p { margin: 10px 0; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+blockquote {
+  margin: 16px 0; padding: 12px 18px; background: #eef7fb;
+  border-left: 4px solid var(--accent); color: #24495e;
+}
+blockquote p { margin: 4px 0; }
+img { display: block; max-width: 100%; height: auto; margin: 18px auto 6px;
+      border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+table { border-collapse: collapse; width: 100%; margin: 16px 0 22px;
+        font-size: 14px; }
+th, td { border: 1px solid var(--line); padding: 7px 10px; vertical-align: top; }
+th { background: #eef3f7; text-align: left; }
+tr:nth-child(even) td { background: #fbfcfd; }
+code { font-family: Consolas, "SFMono-Regular", Menlo, monospace;
+       background: #f1f4f6; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+pre { background: #0f1720; color: #e6edf3; padding: 15px 18px; border-radius: 8px;
+      overflow-x: auto; line-height: 1.55; }
+pre code { background: transparent; color: inherit; padding: 0; font-size: 13px; }
+ul, ol { padding-left: 26px; }
+li { margin: 4px 0; }
+hr { border: none; border-top: 1px solid var(--line); margin: 30px 0; }
+.toc { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;
+       padding: 12px 20px 12px 26px; margin: 18px 0 8px; font-size: 14px; }
+.toc ul { margin: 4px 0; padding-left: 20px; }
+.toc > ul { padding-left: 6px; }
+.toc li { margin: 2px 0; }
+.small { color: var(--muted); font-size: 13px; }
+@media print {
+  body { background: #fff; }
+  .page { box-shadow: none; max-width: none; padding: 0; }
+  h2 { page-break-after: avoid; }
+  img, table { page-break-inside: avoid; }
+}
+</style>
+</head>
+<body><div style="max-width:1080px;margin:18px auto 0;padding:10px 16px;font-family:Microsoft YaHei,sans-serif;font-size:14px;"><a href="index.html" style="color:#0b6e99;text-decoration:none;">← 返回课程网站</a></div>
+<div class="page">
+<h1 id="2">从公共数据到可复现结论：人类胰岛单细胞图谱与 2 型糖尿病再分析</h1>
+<blockquote>
+<p><strong>适合对象</strong>：刚入学的医学研究生，学过基础分子生物学与统计，但还没有完整跑过
+单细胞项目。</p>
+<p><strong>你会得到</strong>：一套可运行的分析代码、两个真实公开数据集的处理结果、全部中间表与
+图，以及“为什么这样做、什么时候会做错”的讲解。</p>
+<p><strong>数据</strong>：GSE84133（Baron 2016）与 GSE81608（Xin 2016），均为人类胰岛（islet）
+公共数据。代码在 <code>code/</code>，结果在 <code>results/</code>，图在 <code>figures/</code>。</p>
+</blockquote>
+<hr />
+<h2 id="0-tldr">0. 先看结论（TL;DR）</h2>
+<ol>
+<li><strong>数据集 A（GSE84133）</strong>：8,569 个细胞、4 名供者，质控后 8,531 个细胞、
+   16,353 个基因；无监督聚类得到 19 个簇，合并注释为 <strong>11 类</strong>胰腺/胰岛细胞。
+   与作者原始标签的调整兰德指数（ARI）为 <strong>0.968</strong>，说明 marker 注释与独立
+   聚类高度一致。</li>
+<li><strong>数据集 B（GSE81608）</strong>：1,600 个细胞、18 名供者（12 非糖尿病、6 型 2 糖尿病），
+   503 个 β 细胞。用 <strong>供者水平 pseudobulk</strong>（16 名有 ≥10 个 β 细胞的供者）比较
+   T2D 与对照，<strong>0/9,929 个基因通过 FDR&lt;0.05</strong>。</li>
+<li>如果错误地把每个细胞当独立样本，细胞水平检验会给出 <strong>1,217/39,851</strong> 个
+   “显著”基因——这是典型的 <strong>伪重复（pseudo-replication）</strong>，会把供者间的差异
+   误当成疾病效应。</li>
+<li>作为阳性对照，β vs α 的 pseudobulk 比较有 <strong>3,086/11,053</strong> 个基因显著
+   （INS +10.05、IAPP +9.72、GCG −8.79），说明流程本身有检验效能。</li>
+<li>因此，本教程的疾病结论是：<strong>在这份数据、这个细胞类型、这个模型和这个样本量下，
+   没有检出可重复的 T2D 全局转录差异</strong>；这不是“T2D 没有影响”，而是“当前设计的
+   检验效能/数据质量不足以支持差异基因列表”。</li>
+</ol>
+<blockquote>
+<p>一句话方法论：<strong>先确定推断单位（供者），再谈显著性；先看 metadata，再做图。</strong></p>
+</blockquote>
+<hr />
+<h2 id="_1">目录</h2>
+<div class="toc">
+<ul>
+<li><a href="#2">从公共数据到可复现结论：人类胰岛单细胞图谱与 2 型糖尿病再分析</a><ul>
+<li><a href="#0-tldr">0. 先看结论（TL;DR）</a></li>
+<li><a href="#_1">目录</a></li>
+<li><a href="#1">1. 单细胞研究范式：我们到底在回答什么问题？</a><ul>
+<li><a href="#11">1.1 三个必须提前想清楚的问题</a></li>
+</ul>
+</li>
+<li><a href="#2_1">2. 公共数据资源与选题</a><ul>
+<li><a href="#21">2.1 常用数据库</a></li>
+<li><a href="#22-geo">2.2 检索策略（以 GEO 为例）</a></li>
+<li><a href="#23">2.3 为什么选这两个数据集</a></li>
+</ul>
+</li>
+<li><a href="#3">3. 数据获取与工程化</a><ul>
+<li><a href="#31-geo">3.1 GEO 的文件结构</a></li>
+<li><a href="#32-anndata">3.2 从矩阵到 AnnData</a></li>
+<li><a href="#33-id">3.3 基因 ID 映射</a></li>
+</ul>
+</li>
+<li><a href="#4-qc">4. 质控（QC）：先看分布，再定阈值</a><ul>
+<li><a href="#41">4.1 看哪些指标</a></li>
+<li><a href="#42">4.2 本教程的实际处理</a></li>
+<li><a href="#43-20">4.3 不要机械套用“线粒体 &lt; 20%”</a></li>
+</ul>
+</li>
+<li><a href="#5">5. 归一化与特征选择</a><ul>
+<li><a href="#51">5.1 两种数据类型，两种归一化</a></li>
+<li><a href="#52-hvg">5.2 高变基因（HVG）</a></li>
+</ul>
+</li>
+<li><a href="#6">6. 降维、聚类与批次</a><ul>
+<li><a href="#61">6.1 标准顺序</a></li>
+<li><a href="#62">6.2 本教程的结果</a></li>
+<li><a href="#63">6.3 批次：什么时候校正，什么时候不要校正</a></li>
+</ul>
+</li>
+<li><a href="#7">7. 细胞类型注释</a><ul>
+<li><a href="#71-marker">7.1 用 marker，而不是只看簇编号</a></li>
+<li><a href="#72">7.2 注释结果与验证</a></li>
+</ul>
+</li>
+<li><a href="#8">8. 细胞组成分析：比例变化不等于疾病效应</a><ul>
+<li><a href="#81">8.1 正确做法</a></li>
+<li><a href="#82-baron">8.2 Baron 的结果（描述性）</a></li>
+<li><a href="#83-gse81608">8.3 GSE81608 的结果</a></li>
+</ul>
+</li>
+<li><a href="#9-pseudobulk">9. 差异表达：为什么必须做 pseudobulk</a><ul>
+<li><a href="#91">9.1 伪重复：单细胞分析最危险的统计错误</a></li>
+<li><a href="#92-pseudobulk">9.2 Pseudobulk 的做法</a></li>
+<li><a href="#93-t2d">9.3 结果：没有全局 T2D 信号</a></li>
+<li><a href="#94-vs">9.4 阳性对照：β vs α</a></li>
+<li><a href="#95-245">9.5 为什么和原论文的 245 个基因不一样？</a></li>
+</ul>
+</li>
+<li><a href="#10">10. 结果解读：哪些话可以说，哪些不能说</a><ul>
+<li><a href="#101">10.1 可以说</a></li>
+<li><a href="#102">10.2 不能说</a></li>
+<li><a href="#103">10.3 如果要把这个故事做成论文，还需要什么</a></li>
+</ul>
+</li>
+<li><a href="#11_1">11. 可复现性与常见坑</a><ul>
+<li><a href="#111">11.1 检查清单</a></li>
+<li><a href="#112">11.2 常见坑</a></li>
+</ul>
+</li>
+<li><a href="#12">12. 下一步学习路线</a><ul>
+<li><a href="#121">12.1 两周内</a></li>
+<li><a href="#122">12.2 一个月内</a></li>
+<li><a href="#123">12.3 两个月内</a></li>
+<li><a href="#124">12.4 推荐阅读</a></li>
+</ul>
+</li>
+<li><a href="#a">附录 A：运行命令</a></li>
+<li><a href="#b">附录 B：主要输出文件</a></li>
+<li><a href="#c">附录 C：数据与引用</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<hr />
+<h2 id="1">1. 单细胞研究范式：我们到底在回答什么问题？</h2>
+<p>单细胞 RNA-seq（scRNA-seq）不是“跑一张 UMAP”。一个完整研究通常回答四层问题：</p>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>典型问题</th>
+<th>主要分析</th>
+<th>结论强度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>描述</td>
+<td>组织里有哪些细胞类型？</td>
+<td>QC、聚类、marker 注释</td>
+<td>探索性</td>
+</tr>
+<tr>
+<td>比较</td>
+<td>疾病/处理改变了哪些细胞类型或状态？</td>
+<td>组成分析、差异表达、通路</td>
+<td>关联性</td>
+</tr>
+<tr>
+<td>机制</td>
+<td>哪些调控因子/通讯/轨迹驱动变化？</td>
+<td>SCENIC、CellChat、RNA velocity、轨迹</td>
+<td>假说生成</td>
+</tr>
+<tr>
+<td>验证</td>
+<td>能否在独立队列/实验中重复？</td>
+<td>独立数据、smFISH/免疫组化、功能实验</td>
+<td>因果/可重复</td>
+</tr>
+</tbody>
+</table>
+<p>本教程覆盖前两层，并刻意加入<strong>阳性对照</strong>和<strong>阴性结果</strong>，因为“能跑出图”不等于
+“结论可信”。</p>
+<h3 id="11">1.1 三个必须提前想清楚的问题</h3>
+<ol>
+<li><strong>分析单位是什么？</strong>
+   - 细胞是观测单位，但<strong>供者是生物学重复</strong>。
+   - 比较 T2D vs 对照时，n 是供者数，不是细胞数。</li>
+<li><strong>是发现还是验证？</strong>
+   - 发现：在数据集 A 里探索细胞类型/状态，允许假说生成。
+   - 验证：在独立数据集 B 里检验预设的细胞类型和假设。</li>
+<li><strong>批次/混杂是否与分组共线？</strong>
+   - 如果所有 T2D 供者都来自同一中心、同一批次，那么“疾病效应”和“批次效应”
+     无法分离。这是公共数据再分析最常见的问题。</li>
+</ol>
+<hr />
+<h2 id="2_1">2. 公共数据资源与选题</h2>
+<h3 id="21">2.1 常用数据库</h3>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>适合做什么</th>
+<th>注意点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.ncbi.nlm.nih.gov/geo/">GEO</a></td>
+<td>最常用的 scRNA-seq 原始/处理后数据</td>
+<td>以 Series（GSE）为单位；要看 sample metadata 和 supplementary 文件</td>
+</tr>
+<tr>
+<td><a href="https://cellxgene.cziscience.com/">CELLxGENE</a></td>
+<td>已整理、带标准注释的单细胞图谱；可在线浏览/下载 h5ad</td>
+<td>schema 统一，但版本和细胞筛选需核对</td>
+</tr>
+<tr>
+<td><a href="https://www.humancellatlas.org/">Human Cell Atlas</a></td>
+<td>人体组织参考图谱</td>
+<td>数据量大；部分项目有受控访问</td>
+</tr>
+<tr>
+<td><a href="https://hpap.pmacs.upenn.edu/">HPAP / PANC-DB</a></td>
+<td>人类胰腺/胰岛，糖尿病相关</td>
+<td>部分数据需按页面说明申请；临床元数据较丰富</td>
+</tr>
+<tr>
+<td><a href="https://singlecell.broadinstitute.org/">Single Cell Portal</a></td>
+<td>Broad 发布的图谱，带在线可视化和 processed 矩阵</td>
+<td>以研究项目为单位，下载格式不统一</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/biostudies/arrayexpress">ArrayExpress / BioStudies</a></td>
+<td>欧洲镜像/补充资源</td>
+<td>与 GEO 有交叉，但并非所有 GSE 都有镜像</td>
+</tr>
+<tr>
+<td><a href="https://tabula-sapiens-portal.ds.czbiohub.org/">Tabula Sapiens</a></td>
+<td>多器官健康人参考图谱</td>
+<td>适合做细胞类型参考/标签转移</td>
+</tr>
+<tr>
+<td><a href="https://gtexportal.org/">GTEx</a></td>
+<td>组织水平 bulk 表达/eQTL</td>
+<td>不是单细胞；可做 deconvolution/validation</td>
+</tr>
+<tr>
+<td><a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171">GSE176171</a></td>
+<td>人/鼠白色脂肪单细胞图谱（肥胖方向）</td>
+<td>数据量大；脂肪组织解离偏差明显</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-geo">2.2 检索策略（以 GEO 为例）</h3>
+<p>关键词组合示例：</p>
+<pre><code class="language-text">(&quot;single-cell&quot;[All Fields] OR &quot;scRNA-seq&quot;[All Fields])
+AND (pancreatic islet*[All Fields] OR &quot;islet of Langerhans&quot;[All Fields])
+AND (&quot;type 2 diabetes&quot;[All Fields] OR T2D[All Fields])
+</code></pre>
+<p>筛选时逐项核对：</p>
+<ul>
+<li><strong>物种/组织</strong>：人？胰岛？全胰腺？脂肪？</li>
+<li><strong>疾病定义</strong>：T2D 如何诊断（HbA1c、空腹血糖、用药）？对照是否匹配年龄/BMI？</li>
+<li><strong>样本量</strong>：供者数、每组供者数、每个供者的细胞数。</li>
+<li><strong>平台</strong>：10x、inDrop、Smart-seq2、snRNA-seq；不同平台不能直接拼。</li>
+<li><strong>数据层级</strong>：raw counts、processed counts、RPKM/TPM、仅聚类标签。</li>
+<li><strong>元数据</strong>：年龄、性别、BMI、HbA1c、胰岛纯度、批次、解离方案。</li>
+<li><strong>是否有作者标签</strong>：可用于独立验证注释，但不能当“金标准”。</li>
+</ul>
+<h3 id="23">2.3 为什么选这两个数据集</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133（Baron 2016）</th>
+<th>GSE81608（Xin 2016）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>组织</td>
+<td>人胰岛（inDrop）</td>
+<td>人胰岛（单细胞 RNA-seq）</td>
+</tr>
+<tr>
+<td>细胞数</td>
+<td>8,569</td>
+<td>1,600（论文报告 1,492）</td>
+</tr>
+<tr>
+<td>供者</td>
+<td>4（3 对照，1 T2D）</td>
+<td>18（12 对照，6 T2D）</td>
+</tr>
+<tr>
+<td>基因</td>
+<td>20,125</td>
+<td>39,851</td>
+</tr>
+<tr>
+<td>数据类型</td>
+<td>UMI counts</td>
+<td>gene-level RPKM</td>
+</tr>
+<tr>
+<td>作者标签</td>
+<td>14 类（含 rare types）</td>
+<td>α/β/δ/PP</td>
+</tr>
+<tr>
+<td>本教程用途</td>
+<td>无监督图谱、聚类、注释</td>
+<td>T2D vs 对照 pseudobulk DE</td>
+</tr>
+</tbody>
+</table>
+<p><strong>选择理由</strong>：</p>
+<ul>
+<li>GSE84133 是经典的人类胰腺单细胞图谱，细胞类型丰富、作者标签完整，适合学习
+  聚类和注释；但只有 1 个 T2D 供者，<strong>不能</strong>用于可靠的疾病比较。</li>
+<li>GSE81608 有 18 名供者、疾病分组相对平衡，适合学习<strong>供者水平</strong>差异表达；
+  但它是 RPKM，不是 UMI counts，且没有线粒体基因/空液滴信息。</li>
+</ul>
+<blockquote>
+<p><strong>关键坑</strong>：GSE84133 的 4 名供者中只有 1 名 T2D（D4），不是“2 vs 2”。
+不要根据文件名或印象判断分组；一定要读 series matrix 的
+<code>!Sample_characteristics_ch1</code>。</p>
+</blockquote>
+<hr />
+<h2 id="3">3. 数据获取与工程化</h2>
+<h3 id="31-geo">3.1 GEO 的文件结构</h3>
+<p>一个 GSE 通常有三类文件：</p>
+<ol>
+<li><strong>Series matrix</strong>：样本元数据 + 表达矩阵（如果有）；本教程用它核对供者、
+   疾病、年龄、性别、BMI。</li>
+<li><strong>Supplementary files</strong>：作者上传的处理后矩阵，常在
+   <code>https://ftp.ncbi.nlm.nih.gov/geo/series/GSE.../suppl/</code>。</li>
+<li><strong>Sample-level supplementary files</strong>：每个 GSM 一个文件，适合只下载需要的样本；
+   GSE84133 的 4 个人类样本就在这一层。</li>
+</ol>
+<p>本教程使用 <code>code/download_ranges.py</code>：把 gzip 文件切成多个 byte range 并行下载，
+再按顺序拼接。gzip 是字节流，因此<strong>按序拼接 range 可以精确重建原文件</strong>。</p>
+<pre><code class="language-powershell">python code/download_ranges.py `
+  &quot;https://ftp.ncbi.nlm.nih.gov/geo/series/GSE81nnn/GSE81608/suppl/GSE81608_human_islets_rpkm.txt.gz&quot; `
+  &quot;data/GSE81608_human_islets_rpkm.txt.gz&quot; --workers 8 --chunk-mb 4
+</code></pre>
+<p>下载后核对 SHA256（见 <code>data/README.md</code>）。这一步看似琐碎，但公共数据再分析最
+常见的问题是“下错文件/版本变了/样本对不上”。</p>
+<h3 id="32-anndata">3.2 从矩阵到 AnnData</h3>
+<p>单细胞分析的核心数据结构是 <strong>AnnData</strong>：</p>
+<ul>
+<li><code>X</code>：细胞 × 基因的表达矩阵（本教程用稀疏 CSR）；</li>
+<li><code>obs</code>：每个细胞一行，记录供者、疾病、年龄、性别、作者标签；</li>
+<li><code>var</code>：每个基因一行，记录基因名、是否线粒体、是否高变；</li>
+<li><code>layers</code>：保存原始 counts/RPKM，避免归一化后丢失原始值；</li>
+<li><code>obsm</code>：PCA/UMAP 等降维结果；</li>
+<li><code>uns</code>：数据集说明、配色等。</li>
+</ul>
+<p>代码骨架（<code>code/00_prepare_data.py</code>）：</p>
+<pre><code class="language-python">adata = ad.AnnData(
+    X=csr_matrix(counts),                 # cells x genes
+    obs=pd.DataFrame(metadata, index=cell_ids),
+    var=pd.DataFrame(index=gene_names),
+)
+adata.layers[&quot;counts&quot;] = adata.X.copy()   # 保留原始值
+adata.var_names_make_unique()
+adata.write_h5ad(&quot;data/processed/baron_raw.h5ad&quot;)
+</code></pre>
+<h3 id="33-id">3.3 基因 ID 映射</h3>
+<p>GSE81608 的第一列是 <strong>Entrez GeneID</strong>（1, 2, 3…），不是基因符号。我们用 NCBI
+<code>Homo_sapiens.gene_info.gz</code> 把 GeneID 映射到 HGNC symbol；39,851 个 ID 中
+37,987 个成功映射。未映射的保留为 <code>Entrez:&lt;id&gt;</code>，避免丢失。</p>
+<blockquote>
+<p>教学点：公共矩阵的“基因名”可能是 Ensembl ID、Entrez ID、RefSeq、探针 ID，
+甚至带版本号。<strong>先确认 ID 类型，再做任何注释/富集</strong>。</p>
+</blockquote>
+<hr />
+<h2 id="4-qc">4. 质控（QC）：先看分布，再定阈值</h2>
+<h3 id="41">4.1 看哪些指标</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>说明</th>
+<th>异常提示</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>检测基因数（nGene）</td>
+<td>每个细胞检测到的基因数</td>
+<td>过低：空液滴/死细胞；过高：双细胞</td>
+</tr>
+<tr>
+<td>UMI 总数</td>
+<td>每个细胞的 counts</td>
+<td>过低：文库失败；过高：双细胞</td>
+</tr>
+<tr>
+<td>线粒体比例</td>
+<td>MT- 基因 counts 占比</td>
+<td>过高：细胞应激/死亡</td>
+</tr>
+<tr>
+<td>双细胞评分</td>
+<td>Scrublet/scDblFinder</td>
+<td>双细胞会形成“混合”簇</td>
+</tr>
+<tr>
+<td>环境 RNA</td>
+<td>SoupX/CellBender</td>
+<td>外泌/裂解 RNA 污染</td>
+</tr>
+<tr>
+<td>复杂度</td>
+<td>基因数/UMI 的关系</td>
+<td>低复杂度提示异常</td>
+</tr>
+</tbody>
+</table>
+<h3 id="42">4.2 本教程的实际处理</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133</th>
+<th>GSE81608</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>原始细胞</td>
+<td>8,569</td>
+<td>1,600</td>
+</tr>
+<tr>
+<td>过滤规则</td>
+<td>nGene ≥ 800；UMI ≥ 1,500；nGene ≤ 5,000；基因在 ≥3 个细胞表达</td>
+<td>未删细胞（所有细胞 &gt;2,400 基因）</td>
+</tr>
+<tr>
+<td>保留细胞</td>
+<td>8,531（99.6%）</td>
+<td>1,600（100%）</td>
+</tr>
+<tr>
+<td>保留基因</td>
+<td>16,353</td>
+<td>39,851</td>
+</tr>
+<tr>
+<td>线粒体</td>
+<td><strong>无 MT- 基因</strong>（处理后矩阵只保留 20,125 个蛋白编码基因）</td>
+<td><strong>无 MT- 基因</strong></td>
+</tr>
+<tr>
+<td>双细胞</td>
+<td>未做（无原始空液滴）</td>
+<td>未做</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python">sc.pp.calculate_qc_metrics(adata, qc_vars=[&quot;mt&quot;], inplace=True)
+sc.pp.filter_cells(adata, min_genes=800)
+sc.pp.filter_cells(adata, min_counts=1500)
+sc.pp.filter_genes(adata, min_cells=3)
+</code></pre>
+<p><img alt="Baron QC" src="figures/baron_qc_violin.png" /></p>
+<p><img alt="GSE81608 QC" src="figures/gse81608_qc_genes.png" /></p>
+<h3 id="43-20">4.3 不要机械套用“线粒体 &lt; 20%”</h3>
+<ul>
+<li>不同组织、不同平台、不同解离方式的最优阈值不同。胰岛细胞本身代谢活跃，
+  线粒体比例可能偏高；心肌、肝细胞也不同。</li>
+<li>应该看<strong>分布</strong>：如果 mito% 在 0–20% 有一个明显的低值主峰，20% 可能是合理的；
+  如果整体连续，硬切会丢掉真实细胞。</li>
+<li>本数据没有 MT- 基因，所以<strong>不能</strong>计算 mito%；不要为了“流程完整”而编造一个
+  0% 的线粒体图。</li>
+</ul>
+<blockquote>
+<p>生产级流程还应包括：空液滴剔除（EmptyDrops）、双细胞检测（Scrublet/
+scDblFinder）、环境 RNA 校正（SoupX/CellBender）。这些需要原始 barcode 矩阵，
+处理后矩阵通常做不到。</p>
+</blockquote>
+<hr />
+<h2 id="5">5. 归一化与特征选择</h2>
+<h3 id="51">5.1 两种数据类型，两种归一化</h3>
+<table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>做法</th>
+<th>本教程</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UMI counts</td>
+<td>每个细胞缩放到相同总 counts（如 1e4），再 <code>log1p</code></td>
+<td>GSE84133</td>
+</tr>
+<tr>
+<td>RPKM/TPM</td>
+<td>已经按基因长度和测序深度归一化，直接 <code>log2(x+1)</code></td>
+<td>GSE81608</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python"># counts
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+
+# RPKM
+adata.X.data = np.log2(adata.X.data + 1)
+</code></pre>
+<blockquote>
+<p>不要对 RPKM 再做 CP10k；也不要在 log 后的数据上做 <code>normalize_total</code>。
+归一化顺序错了，后面的 HVG、PCA、DE 都会跟着错。</p>
+</blockquote>
+<h3 id="52-hvg">5.2 高变基因（HVG）</h3>
+<ul>
+<li>目的：把 20,000+ 个基因降到 2,000 个信息量大的基因，降低噪声和计算量。</li>
+<li>使用 <code>batch_key="donor"</code>，让 HVG 在供者间更稳定。</li>
+<li>不要用“差异表达基因”来选 HVG 后再做同一比较（double dipping）。</li>
+</ul>
+<pre><code class="language-python">sc.pp.highly_variable_genes(
+    adata, n_top_genes=2000, batch_key=&quot;donor&quot;, flavor=&quot;seurat&quot;
+)
+adata = adata[:, adata.var[&quot;highly_variable&quot;]].copy()
+sc.pp.scale(adata, max_value=10)
+</code></pre>
+<blockquote>
+<p><code>scale</code> 会把稀疏矩阵变成稠密矩阵；大数据集要分块/用替代方案。本数据规模
+（8,531 × 2,000）可以接受。</p>
+</blockquote>
+<hr />
+<h2 id="6">6. 降维、聚类与批次</h2>
+<h3 id="61">6.1 标准顺序</h3>
+<ol>
+<li>PCA（50 个主成分，取前 30 个）；</li>
+<li>kNN 图（k=15）；</li>
+<li>UMAP（可视化）；</li>
+<li>Leiden（聚类，resolution 控制粒度）。</li>
+</ol>
+<pre><code class="language-python">sc.tl.pca(adata, n_comps=50, svd_solver=&quot;arpack&quot;, random_state=42)
+sc.pp.neighbors(adata, n_neighbors=15, n_pcs=30, random_state=42)
+sc.tl.umap(adata, random_state=42)
+sc.tl.leiden(adata, resolution=0.6, random_state=42,
+             flavor=&quot;igraph&quot;, n_iterations=2, directed=False)
+</code></pre>
+<h3 id="62">6.2 本教程的结果</h3>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133</th>
+<th>GSE81608</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Leiden resolution</td>
+<td>0.6</td>
+<td>0.4</td>
+</tr>
+<tr>
+<td>簇数</td>
+<td>19</td>
+<td>8</td>
+</tr>
+<tr>
+<td>合并后类型</td>
+<td>11</td>
+<td>4</td>
+</tr>
+<tr>
+<td>主要问题</td>
+<td>亚群多（β 应激、ductal REG+）</td>
+<td>α 细胞被拆成 5 簇</td>
+</tr>
+</tbody>
+</table>
+<p>GSE84133 的 19 个簇并不是 19 种细胞类型：β 细胞被分成 4 簇（其中一簇高表达
+DDIT3/HSPA5/HERPUD1，是 ER 应激状态），α 细胞 3 簇，ductal 4 簇。<strong>聚类粒度
+≠ 细胞类型数</strong>；需要 marker 注释后再合并。</p>
+<p>GSE81608 的 8 个簇中，α 细胞被拆成 5 簇，β/δ/PP 各 1 簇；合并注释为 4 类。
+α 的过度拆分很可能来自供者/技术差异，而不是 5 种 α 细胞。</p>
+<p><img alt="Baron UMAP" src="figures/baron_umap_overview.png" /></p>
+<h3 id="63">6.3 批次：什么时候校正，什么时候不要校正</h3>
+<ul>
+<li>本教程<strong>没有</strong>做 Harmony/ComBat。原因：GSE84133 的 T2D 状态与 D4 供者完全
+  共线；如果强行按供者校正，可能把疾病信号一起删掉。</li>
+<li>我们做了两件事：
+  1. 在 UMAP 上检查供者混合情况（<code>color="donor"</code>）；
+  2. 在注释后检查每个簇的供者组成。</li>
+<li>如果要做跨数据集图谱整合，才考虑 Harmony/scVI/BBKNN；并且要在<strong>不包含
+  疾病标签</strong>的嵌入上评估批次混合，避免“用标签校正”。</li>
+</ul>
+<blockquote>
+<p>经验法则：<strong>批次校正的目的是让同一细胞类型在不同批次中对齐，不是让疾病
+分组消失</strong>。当分组与批次共线时，任何“校正后差异消失”都可能是过校正。</p>
+</blockquote>
+<hr />
+<h2 id="7">7. 细胞类型注释</h2>
+<h3 id="71-marker">7.1 用 marker，而不是只看簇编号</h3>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>关键 marker</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>β</td>
+<td>INS, IAPP, MAFA, NKX6-1, PDX1, UCN3, SLC2A2</td>
+</tr>
+<tr>
+<td>α</td>
+<td>GCG, IRX2, ARX, TTR</td>
+</tr>
+<tr>
+<td>δ</td>
+<td>SST, HHEX, LEPR</td>
+</tr>
+<tr>
+<td>PP（γ）</td>
+<td>PPY</td>
+</tr>
+<tr>
+<td>腺泡</td>
+<td>CPA1, CELA3A, PRSS1, AMY2A</td>
+</tr>
+<tr>
+<td>导管</td>
+<td>KRT19, CFTR, MUC1, TFF1；REG+ 亚群：REG3A, OLFM4, REG1A</td>
+</tr>
+<tr>
+<td>内皮</td>
+<td>PECAM1, VWF, CDH5</td>
+</tr>
+<tr>
+<td>星状细胞</td>
+<td>COL1A1, PDGFRB, RGS5, ACTA2</td>
+</tr>
+<tr>
+<td>巨噬细胞</td>
+<td>CD68, LYZ, C1QA</td>
+</tr>
+<tr>
+<td>肥大细胞</td>
+<td>TPSAB1, CPA3</td>
+</tr>
+<tr>
+<td>Schwann</td>
+<td>SOX10, PLP1, S100B</td>
+</tr>
+</tbody>
+</table>
+<p><img alt="Baron marker dotplot" src="figures/baron_dotplot_celltype.png" /></p>
+<h3 id="72">7.2 注释结果与验证</h3>
+<table>
+<thead>
+<tr>
+<th>簇</th>
+<th>注释</th>
+<th>关键证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1, 3, 12</td>
+<td>β</td>
+<td>INS/IAPP/MAFA/NKX6-1/PDX1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>β（ER 应激高）</td>
+<td>DDIT3, HSPA5, HERPUD1, TRIB3</td>
+</tr>
+<tr>
+<td>8, 9, 10</td>
+<td>α</td>
+<td>GCG, IRX2, ARX, TTR</td>
+</tr>
+<tr>
+<td>4</td>
+<td>δ</td>
+<td>SST, HHEX, LEPR</td>
+</tr>
+<tr>
+<td>13</td>
+<td>PP</td>
+<td>PPY</td>
+</tr>
+<tr>
+<td>0</td>
+<td>腺泡</td>
+<td>CPA1, CELA3A, PRSS1</td>
+</tr>
+<tr>
+<td>7, 11, 15, 18</td>
+<td>导管</td>
+<td>KRT19, CFTR, MUC1；18 为 REG+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>星状</td>
+<td>COL1A1, PDGFRB, RGS5</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Schwann</td>
+<td>SOX10, PLP1</td>
+</tr>
+<tr>
+<td>14</td>
+<td>内皮</td>
+<td>PECAM1, VWF, CDH5</td>
+</tr>
+<tr>
+<td>16</td>
+<td>巨噬细胞</td>
+<td>CD68, LYZ, C1QA</td>
+</tr>
+<tr>
+<td>17</td>
+<td>肥大</td>
+<td>TPSAB1, CPA3</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>与作者标签的 <strong>ARI = 0.968</strong>（Baron）；GSE81608 为 <strong>0.856</strong>（α 被拆分）。</li>
+<li>罕见类型：作者标注了 18 个 ε 细胞和 7 个 T 细胞；在当前分辨率下，它们没有
+  形成独立簇（ε 被 β 吸收，T 细胞被巨噬细胞簇吸收）。这是<strong>样本量/分辨率的
+  限制</strong>，不是“这些细胞不存在”。</li>
+</ul>
+<p><img alt="Baron annotated UMAP" src="figures/baron_umap_annotated.png" /></p>
+<blockquote>
+<p>注释的三个常见错误：
+1. 用同一组 marker 既聚类又“验证”注释（循环论证）；
+2. 只看一个 marker（如 INS）就定 β，忽略双细胞/环境 RNA；
+3. 把作者标签当绝对真理。作者标签是独立参考，不是 ground truth。</p>
+</blockquote>
+<hr />
+<h2 id="8">8. 细胞组成分析：比例变化不等于疾病效应</h2>
+<h3 id="81">8.1 正确做法</h3>
+<ul>
+<li>先算<strong>每个供者</strong>内各类型的比例；</li>
+<li>再比较组间（供者水平），而不是把所有细胞混在一起算比例；</li>
+<li>组成数据是<strong>成分数据</strong>（总和为 1），可用 CLR/ILR、scCODA、propeller 等；</li>
+<li>报告绝对细胞数 + 比例 + 供者数。</li>
+</ul>
+<h3 id="82-baron">8.2 Baron 的结果（描述性）</h3>
+<table>
+<thead>
+<tr>
+<th>供者</th>
+<th>条件</th>
+<th style="text-align: right;">β 比例</th>
+<th style="text-align: right;">腺泡比例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>对照</td>
+<td style="text-align: right;">44.8%</td>
+<td style="text-align: right;">5.8%</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>对照</td>
+<td style="text-align: right;">21.6%</td>
+<td style="text-align: right;">0.1%</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>对照</td>
+<td style="text-align: right;">21.5%</td>
+<td style="text-align: right;">23.4%</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>T2D</td>
+<td style="text-align: right;">37.9%</td>
+<td style="text-align: right;">0.4%</td>
+</tr>
+</tbody>
+</table>
+<p>β 比例在 4 名供者间波动很大（21.5%–44.8%），而腺泡比例从 0.1% 到 23.4%。
+这更可能反映<strong>胰岛制备纯度/解离差异</strong>，而不是疾病。只有 1 名 T2D 供者，
+不能做组间统计。</p>
+<p><img alt="Baron composition" src="figures/baron_composition_by_donor.png" /></p>
+<h3 id="83-gse81608">8.3 GSE81608 的结果</h3>
+<p>12 名对照 vs 6 名 T2D：</p>
+<ul>
+<li>对照 β 比例中位数 <strong>35.1%</strong>；</li>
+<li>T2D β 比例中位数 <strong>28.9%</strong>；</li>
+<li>Mann-Whitney <strong>p = 0.494</strong>。</li>
+</ul>
+<p>没有证据表明两组 β 比例不同。但要注意：这是分选/处理后的细胞，不一定代表
+组织原位比例；而且供者数只有 18。</p>
+<p><img alt="GSE81608 composition" src="figures/gse81608_composition.png" /></p>
+<hr />
+<h2 id="9-pseudobulk">9. 差异表达：为什么必须做 pseudobulk</h2>
+<h3 id="91">9.1 伪重复：单细胞分析最危险的统计错误</h3>
+<p>18 名供者共有 503 个 β 细胞（其中 16 名供者有 ≥10 个 β 细胞，用于 pseudobulk）。
+如果你把这 503 个细胞当成 503 个独立样本做 t 检验：</p>
+<ul>
+<li>你会得到极小的 p 值（因为 n 很大）；</li>
+<li>但真正的独立重复是<strong>供者</strong>（naive 分析中 18 名，pseudobulk 中 16 名），
+  不是 503；</li>
+<li>同一供者的细胞高度相关，p 值被严重低估；</li>
+<li>性别、年龄、批次、解离质量等供者级混杂会被当成“疾病效应”。</li>
+</ul>
+<p>本教程的对比：</p>
+<table>
+<thead>
+<tr>
+<th>分析</th>
+<th style="text-align: right;">基因数</th>
+<th style="text-align: right;">FDR&lt;0.05</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>细胞水平朴素 t 检验（错误）</td>
+<td style="text-align: right;">39,851</td>
+<td style="text-align: right;"><strong>1,217</strong></td>
+</tr>
+<tr>
+<td>供者水平 pseudobulk（正确）</td>
+<td style="text-align: right;">9,929</td>
+<td style="text-align: right;"><strong>0</strong></td>
+</tr>
+<tr>
+<td>阳性对照：β vs α pseudobulk</td>
+<td style="text-align: right;">11,053</td>
+<td style="text-align: right;"><strong>3,086</strong></td>
+</tr>
+</tbody>
+</table>
+<p><img alt="DE method comparison" src="figures/de_method_comparison.png" /></p>
+<p>细胞水平结果中出现了 <code>XIST</code>（性别）、<code>ND3</code>（线粒体）、大量 lncRNA/假基因，
+这本身就是“供者/技术混杂”的信号。</p>
+<h3 id="92-pseudobulk">9.2 Pseudobulk 的做法</h3>
+<ol>
+<li>选定细胞类型（β）；</li>
+<li>每个供者内，对该细胞类型的 RPKM 取平均（或对 counts 求和）；</li>
+<li>得到“供者 × 基因”矩阵（16 × 39,851）；</li>
+<li>每个基因拟合一个模型：</li>
+</ol>
+<pre><code class="language-text">log2(RPKM_ij + 1) = β0 + β1·T2D + β2·age_z + β3·male + ε
+</code></pre>
+<ol start="5">
+<li>对 β1 做 t 检验，BH 校正；报告效应量 + FDR，而不是只看 p。</li>
+</ol>
+<p>本教程的代码（<code>code/04_gse81608_de.py</code>）用向量化最小二乘一次拟合所有基因：</p>
+<pre><code class="language-python">X = np.column_stack([np.ones(n), is_t2d, age_z, is_male])
+coef, *_ = np.linalg.lstsq(X, Y, rcond=None)
+resid = Y - X @ coef
+se = np.sqrt((resid**2).sum(0) / (n - rank) * np.linalg.inv(X.T @ X)[1, 1])
+t = coef[1] / se
+p = 2 * stats.t.sf(np.abs(t), n - rank)
+padj = multipletests(p, method=&quot;fdr_bh&quot;)[1]
+</code></pre>
+<h3 id="93-t2d">9.3 结果：没有全局 T2D 信号</h3>
+<ul>
+<li>9,929 个基因通过表达过滤；</li>
+<li>最小 FDR = <strong>0.95</strong>；</li>
+<li>p 值分布接近均匀（QQ 图贴对角线）；</li>
+<li>0 个基因通过 FDR&lt;0.05，更不用说 |log2FC|&gt;0.5。</li>
+</ul>
+<p><img alt="P-value diagnostics" src="figures/gse81608_pvalue_diagnostics.png" /></p>
+<p>β 身份基因（INS、IAPP、MAFA、PDX1、UCN3、SLC2A2）和内质网应激基因
+（HSPA5、DDIT3）在 T2D 与对照之间都没有显著差异：</p>
+<p><img alt="Selected beta genes" src="figures/gse81608_beta_selected_genes.png" /></p>
+<h3 id="94-vs">9.4 阳性对照：β vs α</h3>
+<p>为了证明“0 个基因”不是因为流程坏了，我们做了 β vs α 的 pseudobulk 比较
+（14 名同时有 ≥10 个 α 和 ≥10 个 β 细胞的供者，配对 t 检验）：</p>
+<ul>
+<li>3,086/11,053 个基因 FDR&lt;0.05；</li>
+<li>INS +10.05、IAPP +9.72、GCG −8.79、DLK1 +7.25、DPP4 −4.64；</li>
+<li>这些完全符合 β/α 的生物学身份。</li>
+</ul>
+<p>阳性对照 + 阴性结果一起说明：<strong>流程有检验效能，但 T2D 的全局差异在本数据/
+本模型下不可检出</strong>。</p>
+<h3 id="95-245">9.5 为什么和原论文的 245 个基因不一样？</h3>
+<p>Xin 等（2016）报告了 245 个 T2D 相关基因。我们的再分析得到 0 个，可能原因：</p>
+<ol>
+<li><strong>分析单位不同</strong>：原文可能使用细胞水平模型/混合模型；我们使用保守的
+   供者水平 pseudobulk。</li>
+<li><strong>数据版本不同</strong>：论文报告 1,492 个细胞，GEO 矩阵有 1,600 列；作者的
+   质控/过滤可能不同。</li>
+<li><strong>协变量不同</strong>：我们调整了年龄和性别；T2D 组年龄均值偏高
+   （45.7 vs 41.2 岁），调整后效应可能进一步缩小。</li>
+<li><strong>RPKM 的限制</strong>：不是 UMI counts，无法做 counts-based 模型；基因长度和
+   批次归一化可能引入噪声。</li>
+<li><strong>阈值不同</strong>：我们要求 FDR&lt;0.05；原文可能报告 nominal p 或不同 FDR。</li>
+<li><strong>样本量/效能</strong>：16 名供者、6 名 T2D，对中等效应仍可能不足。</li>
+</ol>
+<blockquote>
+<p>这不是“原论文错了”，而是<strong>分析选择会改变结论</strong>。可复现研究应该报告：
+数据版本、细胞筛选、协变量、模型、FDR 阈值，以及阴性/阳性对照。</p>
+</blockquote>
+<hr />
+<h2 id="10">10. 结果解读：哪些话可以说，哪些不能说</h2>
+<h3 id="101">10.1 可以说</h3>
+<ul>
+<li>在这份数据中，人类胰岛包含 α、β、δ、PP、腺泡、导管、内皮、星状、巨噬、
+  肥大、Schwann 等细胞类型；marker 注释与作者标签高度一致（ARI 0.968）。</li>
+<li>β 细胞存在 ER 应激相关状态（DDIT3/HSPA5/HERPUD1 高表达），与 Baron 原文
+  报道的 β 异质性一致。</li>
+<li>在 GSE81608 的 16 名供者中，未检出 β 细胞 T2D vs 对照的全局表达差异；
+  β 比例差异也无统计学意义（p=0.494）。</li>
+<li>细胞水平检验会产生大量假阳性；pseudobulk/混合模型是更合适的推断方式。</li>
+</ul>
+<h3 id="102">10.2 不能说</h3>
+<ul>
+<li>“T2D 对 β 细胞没有影响”——阴性结果不等于无效应。</li>
+<li>“我们发现了 T2D 的关键基因”——本分析没有显著基因。</li>
+<li>“β 比例在 T2D 中下降”——p=0.494，且受分选/纯度影响。</li>
+<li>“GSE84133 的 D4 与对照的差异是糖尿病效应”——只有 1 名 T2D 供者，完全
+  与供者/批次共线。</li>
+</ul>
+<h3 id="103">10.3 如果要把这个故事做成论文，还需要什么</h3>
+<ol>
+<li>更大的独立队列（HPAP/PANC-DB、多个 GSE）；</li>
+<li>原始 counts + 空液滴/双细胞/环境 RNA 校正；</li>
+<li>供者水平的年龄、性别、BMI、HbA1c、胰岛纯度、批次；</li>
+<li>预设的细胞类型和模型；pseudobulk + 混合模型/limma-voom/DESeq2；</li>
+<li>独立验证（免疫组化、smFISH、功能实验）；</li>
+<li>报告效应量和置信区间，而不只是 p 值。</li>
+</ol>
+<hr />
+<h2 id="11_1">11. 可复现性与常见坑</h2>
+<h3 id="111">11.1 检查清单</h3>
+<ul>
+<li>[ ] 原始数据 URL、下载日期、SHA256；</li>
+<li>[ ] 数据版本（GEO 可能更新）；</li>
+<li>[ ] 样本 metadata 与矩阵列/行一一对应；</li>
+<li>[ ] 基因 ID 类型与映射表；</li>
+<li>[ ] QC 阈值及保留/删除的细胞数；</li>
+<li>[ ] 归一化方法；</li>
+<li>[ ] HVG 数量、batch key；</li>
+<li>[ ] PCA/邻接图/聚类参数、随机种子；</li>
+<li>[ ] 注释 marker 与独立验证（作者标签/蛋白）；</li>
+<li>[ ] DE 的推断单位、协变量、FDR；</li>
+<li>[ ] 阴性/阳性对照；</li>
+<li>[ ] 软件版本（<code>results/session_info.txt</code>）。</li>
+</ul>
+<h3 id="112">11.2 常见坑</h3>
+<table>
+<thead>
+<tr>
+<th>坑</th>
+<th>后果</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>把细胞当独立重复</td>
+<td>p 值极小、假阳性</td>
+<td>pseudobulk/混合模型</td>
+</tr>
+<tr>
+<td>用文件名猜分组</td>
+<td>分组标错</td>
+<td>读 series matrix</td>
+</tr>
+<tr>
+<td>疾病与批次共线</td>
+<td>无法区分</td>
+<td>独立队列/配对设计</td>
+</tr>
+<tr>
+<td>机械套用 mito&lt;20%</td>
+<td>丢失真实细胞</td>
+<td>看分布、按组织定阈值</td>
+</tr>
+<tr>
+<td>用 HVG 做过又做 DE</td>
+<td>double dipping</td>
+<td>预设基因集/独立数据</td>
+</tr>
+<tr>
+<td>用 marker 聚类又用同一 marker 验证</td>
+<td>循环论证</td>
+<td>独立标签/蛋白验证</td>
+</tr>
+<tr>
+<td>只看 p，不看效应量</td>
+<td>大 n 下微小差异也显著</td>
+<td>报告 log2FC/CI</td>
+</tr>
+<tr>
+<td>忽略环境 RNA/双细胞</td>
+<td>混合簇/假 marker</td>
+<td>SoupX/Scrublet</td>
+</tr>
+<tr>
+<td>过度解释组成比例</td>
+<td>分选/纯度混杂</td>
+<td>供者水平 + 纯度协变量</td>
+</tr>
+<tr>
+<td>只报显著结果</td>
+<td>发表偏倚</td>
+<td>报告阴性/阳性对照</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12">12. 下一步学习路线</h2>
+<h3 id="121">12.1 两周内</h3>
+<ul>
+<li>重跑本教程，改一个参数（resolution、HVG 数、QC 阈值），观察结果变化；</li>
+<li>用 <code>sc.tl.rank_genes_groups</code> 检查每个簇的 top markers；</li>
+<li>用 <code>sc.pl.dotplot</code> 自己挑一组 marker，练习注释。</li>
+</ul>
+<h3 id="122">12.2 一个月内</h3>
+<ul>
+<li>加入 GSE176171（肥胖脂肪组织）或 HPAP 数据，重复同一流程；</li>
+<li>学习 pseudobulk + DESeq2/limma-voom（R）或 PyDESeq2；</li>
+<li>学习组成分析（scCODA、propeller）；</li>
+<li>学习细胞通讯（CellChat/CellPhoneDB）和调控网络（SCENIC）。</li>
+</ul>
+<h3 id="123">12.3 两个月内</h3>
+<ul>
+<li>选择一个明确的临床问题（如“肥胖胰岛素抵抗的脂肪祖细胞状态”）；</li>
+<li>设计发现+验证两队列；</li>
+<li>做 power analysis（供者数、每供者细胞数）；</li>
+<li>预注册分析计划，报告阴性与阳性对照。</li>
+</ul>
+<h3 id="124">12.4 推荐阅读</h3>
+<ol>
+<li>Luecken &amp; Theis, <em>Mol Syst Biol</em> 2019：单细胞分析最佳实践教程。</li>
+<li>Heumos et al., <em>Nat Rev Genet</em> 2023：跨模态单细胞分析最佳实践。</li>
+<li>Squair et al., <em>Nat Commun</em> 2021：单细胞 DE 的假发现。</li>
+<li>Murphy &amp; Skene, <em>Nat Commun</em> 2022：pseudobulk 方法比较。</li>
+<li>Baron et al., <em>Cell Syst</em> 2016；Xin et al., <em>Cell Metab</em> 2016：本教程的数据来源。</li>
+</ol>
+<hr />
+<h2 id="a">附录 A：运行命令</h2>
+<pre><code class="language-powershell">python -m pip install -r requirements.txt
+
+# Windows 上如遇 numba/llvmlite 的 SVML 报错，设置：
+$env:NUMBA_DISABLE_INTEL_SVML = &quot;1&quot;
+
+# 数据下载见 data/README.md
+python code/00_prepare_data.py
+python code/01_baron_cluster.py
+python code/02_baron_annotate.py
+python code/03_gse81608_cluster.py
+python code/04_gse81608_de.py
+python code/05_report_figures.py
+python code/06_session_info.py
+</code></pre>
+<h2 id="b">附录 B：主要输出文件</h2>
+<table>
+<thead>
+<tr>
+<th>文件</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>data/processed/baron_raw.h5ad</code></td>
+<td>Baron 原始 counts + metadata</td>
+</tr>
+<tr>
+<td><code>data/processed/baron_annotated.h5ad</code></td>
+<td>Baron 聚类 + 注释</td>
+</tr>
+<tr>
+<td><code>data/processed/gse81608_raw.h5ad</code></td>
+<td>GSE81608 RPKM + metadata</td>
+</tr>
+<tr>
+<td><code>data/processed/gse81608_annotated.h5ad</code></td>
+<td>GSE81608 聚类 + 注释</td>
+</tr>
+<tr>
+<td><code>results/baron_celltype_composition_pct.csv</code></td>
+<td>Baron 供者水平组成</td>
+</tr>
+<tr>
+<td><code>results/baron_annotation_ari.csv</code></td>
+<td>Baron ARI</td>
+</tr>
+<tr>
+<td><code>results/gse81608_beta_pseudobulk_de.csv</code></td>
+<td>T2D vs 对照 pseudobulk DE</td>
+</tr>
+<tr>
+<td><code>results/gse81608_beta_celllevel_naive_de.csv</code></td>
+<td>细胞水平朴素 DE（反例）</td>
+</tr>
+<tr>
+<td><code>results/gse81608_beta_vs_alpha_positive_control.csv</code></td>
+<td>β vs α 阳性对照</td>
+</tr>
+<tr>
+<td><code>results/de_method_comparison.csv</code></td>
+<td>三种分析对比</td>
+</tr>
+<tr>
+<td><code>results/summary_metrics.csv</code></td>
+<td>数据集汇总指标</td>
+</tr>
+<tr>
+<td><code>results/session_info.txt</code></td>
+<td>软件版本</td>
+</tr>
+</tbody>
+</table>
+<h2 id="c">附录 C：数据与引用</h2>
+<ul>
+<li>GSE84133: <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE84133">GEO</a>；
+  Baron M, et al. <em>Cell Syst</em>. 2016;3(4):346-360.e4.
+  doi:<a href="https://doi.org/10.1016/j.cels.2016.08.011">10.1016/j.cels.2016.08.011</a></li>
+<li>GSE81608: <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE81608">GEO</a>；
+  Xin Y, et al. <em>Cell Metab</em>. 2016;24(4):608-615.
+  doi:<a href="https://doi.org/10.1016/j.cmet.2016.08.018">10.1016/j.cmet.2016.08.018</a></li>
+<li>Squair JW, et al. <em>Nat Commun</em>. 2021;12:5692.
+  doi:<a href="https://doi.org/10.1038/s41467-021-25960-2">10.1038/s41467-021-25960-2</a></li>
+<li>Murphy AE, Skene NG. <em>Nat Commun</em>. 2022;13:7851.
+  doi:<a href="https://doi.org/10.1038/s41467-022-35519-4">10.1038/s41467-022-35519-4</a></li>
+<li>Wolf FA, et al. SCANPY. <em>Genome Biol</em>. 2018;19:15.
+  doi:<a href="https://doi.org/10.1186/s13059-017-1382-0">10.1186/s13059-017-1382-0</a></li>
+<li>Traag VA, et al. Leiden. <em>Sci Rep</em>. 2019;9:5233.
+  doi:<a href="https://doi.org/10.1038/s41598-019-41695-z">10.1038/s41598-019-41695-z</a></li>
+<li>Emont MP, et al. <em>Nature</em>. 2022;603:926-933.
+  doi:<a href="https://doi.org/10.1038/s41586-022-04518-2">10.1038/s41586-022-04518-2</a></li>
+</ul>
+<hr>
+<p class="small">本页由 REPORT.md 自动生成。代码、结果表与图片均在本目录中；
+数据分析使用 Python / Scanpy。公共数据的使用请遵守 GEO/NCBI 条款并引用原始论文。</p>
+</div>
+</body>
+</html>

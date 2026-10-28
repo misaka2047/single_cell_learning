@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2. 数据库检索：如何找到“能用的”公共数据 · 单细胞学习站</title>
+<meta name="description" content="从 GEO 到 CELLxGENE、HCA、HPAP，学会用 metadata 筛选数据，而不是只看标题和细胞数。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="databases">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 2 步 · 45 min</div>
+  <h1>数据库检索：如何找到“能用的”公共数据</h1>
+  <p class="chapter-lead">从 GEO 到 CELLxGENE、HCA、HPAP，学会用 metadata 筛选数据，而不是只看标题和细胞数。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="databases">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#21">2.1 常用资源地图</a></li><li><a href="#22-geo">2.2 GEO 页面到底看什么</a></li><li><a href="#23">2.3 检索策略</a></li><li><a href="#24">2.4 本教程的选择及理由</a></li><li><a href="#25">2.5 预期产出：一张数据选择表</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>知道常用单细胞数据库各自适合什么；</li>
+<li>会用 metadata 判断一个数据集能不能回答你的问题；</li>
+<li>能解释为什么本教程选 GSE84133 做图谱、GSE81608 做疾病比较。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么“找到数据”不等于“能用数据”</span>
+一个 GSE 页面可能写着“single-cell RNA-seq of human islets”，但打开 metadata 才发现：只有 1 名 T2D 供者、没有年龄/性别、只有聚类标签没有 counts、或者所有样本来自同一个批次。<strong>数据选择错误，后面所有分析都救不回来。</strong></p>
+</div>
+<h2 id="21">2.1 常用资源地图</h2>
+<table>
+<thead>
+<tr>
+<th>资源</th>
+<th>适合做什么</th>
+<th>要注意什么</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://www.ncbi.nlm.nih.gov/geo/">GEO</a></td>
+<td>最常用的原始/处理后 scRNA-seq 数据</td>
+<td>以 GSE 为单位；必须看 sample metadata 和 supplementary</td>
+</tr>
+<tr>
+<td><a href="https://cellxgene.cziscience.com/">CELLxGENE</a></td>
+<td>已整理、带标准注释的图谱，可在线浏览/下载 h5ad</td>
+<td>schema 统一，但版本和细胞筛选不同</td>
+</tr>
+<tr>
+<td><a href="https://www.humancellatlas.org/">Human Cell Atlas</a></td>
+<td>人体组织参考图谱</td>
+<td>数据量大；部分项目受控访问</td>
+</tr>
+<tr>
+<td><a href="https://hpap.pmacs.upenn.edu/">HPAP / PANC-DB</a></td>
+<td>人类胰腺/胰岛，糖尿病相关</td>
+<td>临床元数据丰富；部分数据需按页面说明申请</td>
+</tr>
+<tr>
+<td><a href="https://singlecell.broadinstitute.org/">Single Cell Portal</a></td>
+<td>Broad 项目图谱、在线可视化</td>
+<td>项目格式不统一，下载前看清版本</td>
+</tr>
+<tr>
+<td><a href="https://www.ebi.ac.uk/biostudies/arrayexpress">ArrayExpress / BioStudies</a></td>
+<td>欧洲镜像/补充资源</td>
+<td>并非所有 GSE 都有镜像</td>
+</tr>
+<tr>
+<td><a href="https://tabula-sapiens-portal.ds.czbiohub.org/">Tabula Sapiens</a></td>
+<td>多器官健康人参考</td>
+<td>适合做标签转移/参考，不适合直接做疾病比较</td>
+</tr>
+<tr>
+<td><a href="https://gtexportal.org/">GTEx</a></td>
+<td>组织 bulk/eQTL</td>
+<td>不是单细胞；可做 deconvolution/验证</td>
+</tr>
+</tbody>
+</table>
+<p>肥胖方向可以先看 <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE176171">GSE176171</a>（人/鼠白色脂肪单细胞图谱），再按同一套 metadata 标准筛选。</p>
+<h2 id="22-geo">2.2 GEO 页面到底看什么</h2>
+<p>打开一个 GSE，按这个顺序看：</p>
+<ol>
+<li><strong>Series 标题与 summary</strong>：物种、组织、平台、疾病。</li>
+<li><strong>Overall design</strong>：多少供者、多少组、是否有配对。</li>
+<li><strong>Sample metadata</strong>：<code>!Sample_characteristics_ch1</code> 是金矿，包含 age、sex、BMI、HbA1c、condition、cell subtype。</li>
+<li><strong>Supplementary files</strong>：raw counts、processed counts、RPKM/TPM、还是只有聚类标签？</li>
+<li><strong>样本级 supplementary</strong>：能否只下载需要的样本，避免下整包？</li>
+<li><strong>论文</strong>：数据版本、过滤规则、作者用的模型。</li>
+</ol>
+<div class="callout warn">
+<p><span class="callout-title">三个真实坑</span>
+- GSE84133 有 4 名供者，但只有 <strong>1 名 T2D</strong>；不要按“2 vs 2”设计。
+- GSE81608 论文报告 1,492 个细胞，GEO 矩阵有 <strong>1,600 列</strong>；处理后矩阵不一定等于论文的分析集。
+- 两个数据集的 processed matrix 都<strong>没有 MT- 基因</strong>，所以不能算线粒体比例；不要为了“流程完整”编一个 0%。</p>
+</div>
+<h2 id="23">2.3 检索策略</h2>
+<p>以 GEO 为例，关键词可以这样组合：</p>
+<pre><code class="language-text">(&quot;single-cell&quot;[All Fields] OR &quot;scRNA-seq&quot;[All Fields])
+AND (pancreatic islet*[All Fields] OR &quot;islet of Langerhans&quot;[All Fields])
+AND (&quot;type 2 diabetes&quot;[All Fields] OR T2D[All Fields])
+</code></pre>
+<p>但关键词只负责“召回”，真正的筛选靠 metadata：</p>
+<ul>
+<li><strong>物种/组织</strong>：人？胰岛？全胰腺？脂肪？</li>
+<li><strong>疾病定义</strong>：T2D 如何诊断？对照是否匹配年龄/BMI？</li>
+<li><strong>供者数</strong>：每组多少？是否有配对？</li>
+<li><strong>平台</strong>：10x、inDrop、Smart-seq2、snRNA-seq；不同平台不要直接拼。</li>
+<li><strong>数据层级</strong>：raw counts / processed counts / RPKM / 只有标签。</li>
+<li><strong>元数据</strong>：age、sex、BMI、HbA1c、islet purity、batch、解离方案。</li>
+<li><strong>作者标签</strong>：能做独立验证，但不是 ground truth。</li>
+</ul>
+<h2 id="24">2.4 本教程的选择及理由</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133</th>
+<th>GSE81608</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>组织</td>
+<td>人胰岛（inDrop）</td>
+<td>人胰岛（单细胞 RNA-seq）</td>
+</tr>
+<tr>
+<td>细胞数</td>
+<td>8,569</td>
+<td>1,600（论文 1,492）</td>
+</tr>
+<tr>
+<td>供者</td>
+<td>4（3 对照，1 T2D）</td>
+<td>18（12 对照，6 T2D）</td>
+</tr>
+<tr>
+<td>基因</td>
+<td>20,125</td>
+<td>39,851</td>
+</tr>
+<tr>
+<td>数据类型</td>
+<td>UMI counts</td>
+<td>gene-level RPKM</td>
+</tr>
+<tr>
+<td>作者标签</td>
+<td>14 类</td>
+<td>α/β/δ/PP</td>
+</tr>
+<tr>
+<td>本教程用途</td>
+<td>图谱、聚类、注释</td>
+<td>T2D vs 对照 pseudobulk DE</td>
+</tr>
+</tbody>
+</table>
+<p><strong>为什么不是只用一个数据集？</strong></p>
+<ul>
+<li>GSE84133 细胞类型丰富、作者标签完整，适合学习聚类/注释；但疾病比较被供者共线毁掉。</li>
+<li>GSE81608 供者多、分组相对平衡，适合疾病比较；但 RPKM 不是 counts，且没有线粒体/空液滴信息。</li>
+<li>两个数据集互补，正好演示“发现 vs 验证”和“数据限制”。</li>
+</ul>
+<h2 id="25">2.5 预期产出：一张数据选择表</h2>
+<p>在开始下载前，你应该能填出：</p>
+<table>
+<thead>
+<tr>
+<th>列</th>
+<th>你的数据集</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GEO accession</td>
+<td>GSE84133 / GSE81608</td>
+</tr>
+<tr>
+<td>组织/物种</td>
+<td>人胰岛</td>
+</tr>
+<tr>
+<td>平台/数据类型</td>
+<td>inDrop counts / RPKM</td>
+</tr>
+<tr>
+<td>供者数（对照/T2D）</td>
+<td>4（3/1） / 18（12/6）</td>
+</tr>
+<tr>
+<td>细胞数</td>
+<td>8,569 / 1,600</td>
+</tr>
+<tr>
+<td>主要细胞类型</td>
+<td>胰岛 + 胰腺外分泌/基质/免疫</td>
+</tr>
+<tr>
+<td>可用协变量</td>
+<td>年龄、性别、BMI；GSE81608 还有种族</td>
+</tr>
+<tr>
+<td>主要限制</td>
+<td>1 名 T2D；RPKM</td>
+</tr>
+</tbody>
+</table>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：GSE84133 的 4 名供者中，T2D 有几名？你怎么确认？</p>
+<p><strong>Q2</strong>：如果一个数据集只有“cell type labels”而没有表达矩阵，你能做什么、不能做什么？</p>
+<p><strong>Q3</strong>：为什么 GSE81608 的 1,600 列和论文的 1,492 个细胞不一致也可能是正常的？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 1 名（D4）。读 `GSE84133-GPL16791_series_matrix.txt.gz` 的 `!Sample_characteristics_ch1`，不要凭文件名猜。
+2. 可以做组成/标签分析，不能重新聚类、做 marker 或 DE；也无法验证作者注释。
+3. 论文可能做了额外 QC/过滤，或者 GEO 矩阵包含了作者未纳入最终分析的低质量细胞；以 metadata 和矩阵实际内容为准。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>第 3 步开始动手：下载文件、核对 metadata、建立项目目录。你会看到“数据工程”其实占整个项目很大一部分时间。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/paradigm.html"><span>上一章</span><b>1. 研究范式：先写清楚你要回答的问题</b></a><a class="pager-link next" href="../chapters/download.html"><span>下一章</span><b>3. 下载与工程化：把 GEO 变成可分析的项目</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

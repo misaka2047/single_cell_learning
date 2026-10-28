@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9. 组成分析：比例变化到底说明了什么 · 单细胞学习站</title>
+<meta name="description" content="学会用供者水平比例描述细胞组成；看懂 Baron 的纯度差异和 GSE81608 的 β 比例检验（p=0.494）。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="composition">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 9 步 · 40 min</div>
+  <h1>组成分析：比例变化到底说明了什么</h1>
+  <p class="chapter-lead">学会用供者水平比例描述细胞组成；看懂 Baron 的纯度差异和 GSE81608 的 β 比例检验（p=0.494）。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="composition">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#91">9.1 正确做法</a></li><li><a href="#92-baron">9.2 Baron 的结果（只做描述）</a></li><li><a href="#93-gse81608">9.3 GSE81608 的结果</a></li><li><a href="#94">9.4 预期结果与解读</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>会用“每名供者内比例”而不是“所有细胞混在一起”描述组成；</li>
+<li>理解组成数据的成分性质；</li>
+<li>能解释本教程的 β 比例结果，不过度解读。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么不能把所有细胞混在一起算比例</span>
+如果 18 名供者中 T2D 组的细胞数更多，把所有细胞混在一起算比例，会被“细胞数多的供者”主导。正确做法是先算<strong>每名供者</strong>内的比例，再比较组间；统计单位仍是供者。</p>
+</div>
+<h2 id="91">9.1 正确做法</h2>
+<ul>
+<li>先算每个供者内各类型的比例；</li>
+<li>再比较组间（供者水平）；</li>
+<li>组成数据是<strong>成分数据</strong>（总和为 1），普通 t 检验/ANOVA 不完全适用；可用 CLR/ILR、scCODA、propeller；</li>
+<li>报告绝对细胞数 + 比例 + 供者数；</li>
+<li>把“胰岛纯度/解离效率”作为协变量或限制条件。</li>
+</ul>
+<pre><code class="language-python">comp = pd.crosstab(adata.obs[&quot;donor&quot;], adata.obs[&quot;cell_type&quot;])
+comp_pct = comp.div(comp.sum(axis=1), axis=0) * 100
+</code></pre>
+<h2 id="92-baron">9.2 Baron 的结果（只做描述）</h2>
+<table>
+<thead>
+<tr>
+<th>供者</th>
+<th>条件</th>
+<th style="text-align: right;">β 比例</th>
+<th style="text-align: right;">腺泡比例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D1</td>
+<td>对照</td>
+<td style="text-align: right;">44.8%</td>
+<td style="text-align: right;">5.8%</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>对照</td>
+<td style="text-align: right;">21.6%</td>
+<td style="text-align: right;">0.1%</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>对照</td>
+<td style="text-align: right;">21.5%</td>
+<td style="text-align: right;">23.4%</td>
+</tr>
+<tr>
+<td>D4</td>
+<td>T2D</td>
+<td style="text-align: right;">37.9%</td>
+<td style="text-align: right;">0.4%</td>
+</tr>
+</tbody>
+</table>
+<p>β 比例在 4 名供者间波动很大（21.5%–44.8%），腺泡比例从 0.1% 到 23.4%。这更可能反映<strong>胰岛制备纯度/解离差异</strong>，而不是疾病。</p>
+<p>只有 1 名 T2D 供者，不能做组间统计；这里只展示，不做检验。</p>
+<figure><img alt="Baron composition" src="../figures/baron_composition_by_donor.png" /><figcaption>GSE84133 每名供者的细胞类型组成。D2 几乎无腺泡，D3 腺泡占 23.4%，提示胰岛纯度差异。</figcaption></figure>
+
+<h2 id="93-gse81608">9.3 GSE81608 的结果</h2>
+<p>12 名对照 vs 6 名 T2D：</p>
+<ul>
+<li>对照 β 比例中位数 <strong>35.1%</strong>；</li>
+<li>T2D β 比例中位数 <strong>28.9%</strong>；</li>
+<li>Mann-Whitney <strong>p = 0.494</strong>。</li>
+</ul>
+<p>没有证据表明两组 β 比例不同。但要注意：</p>
+<ul>
+<li>这是分选/处理后的细胞，不一定代表组织原位比例；</li>
+<li>供者数只有 18；</li>
+<li>分选策略、细胞活力、解离效率都可能影响比例；</li>
+<li>组成分析不能替代功能实验。</li>
+</ul>
+<figure><img alt="GSE81608 composition" src="../figures/gse81608_composition.png" /><figcaption>GSE81608 的组成与 β 比例。左：每名供者的 α/β/δ/PP 比例；右：β 比例的组间比较（Mann-Whitney p=0.494）。</figcaption></figure>
+
+<h2 id="94">9.4 预期结果与解读</h2>
+<div class="callout expected">
+<p><span class="callout-title">你应该看到</span>
+- Baron：D1 β 44.8%、D2 21.6%、D3 21.5%、D4 37.9%；腺泡 0.1%–23.4%；
+- GSE81608：对照 β 中位数 35.1%，T2D 28.9%，p=0.494；
+- 两张图都按供者展示，而不是把所有细胞合并。</p>
+</div>
+<p><strong>可以写</strong>：</p>
+<blockquote>
+<p>“在本数据中，β 细胞比例在对照组中位数为 35.1%，T2D 组为 28.9%，差异无统计学意义（Mann-Whitney p=0.49，12 vs 6 名供者）。比例受胰岛纯度和解离效率影响，需在更大样本中验证。”</p>
+</blockquote>
+<p><strong>不要写</strong>：</p>
+<blockquote>
+<p>“T2D 导致 β 细胞比例下降。”——p=0.49，且没有调整纯度。</p>
+</blockquote>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：为什么组成分析的 n 是供者数，而不是细胞数？</p>
+<p><strong>Q2</strong>：Baron 的 D2 腺泡只有 0.1%，最可能的原因是什么？</p>
+<p><strong>Q3</strong>：如果 T2D 组 β 比例更低但 p=0.49，你应该怎么报告？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 每名供者是一个独立样本；细胞数增加的是精度，不是重复数。
+2. 胰岛制备纯度高/腺泡丢失，或解离偏好；不是“D2 没有腺泡”。
+3. 报告中位数、供者数、检验方法和 p 值，说明“无统计学意义”，不要写成“下降”。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>组成分析回答“谁多谁少”；下一步回答“同一类细胞内部，哪些基因变了”。这是全教程统计上最关键的一章：为什么必须做 pseudobulk。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/annotation.html"><span>上一章</span><b>8. 细胞类型注释：marker、标签与验证</b></a><a class="pager-link next" href="../chapters/de.html"><span>下一章</span><b>10. 差异表达：为什么必须做 pseudobulk</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

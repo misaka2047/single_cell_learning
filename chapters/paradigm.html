@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1. 研究范式：先写清楚你要回答的问题 · 单细胞学习站</title>
+<meta name="description" content="单细胞分析不是一张 UMAP。先确定生物学问题、推断单位和验证策略，后面每个参数才有选择依据。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="paradigm">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link active" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 1 步 · 35 min</div>
+  <h1>研究范式：先写清楚你要回答的问题</h1>
+  <p class="chapter-lead">单细胞分析不是一张 UMAP。先确定生物学问题、推断单位和验证策略，后面每个参数才有选择依据。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="paradigm">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#11">1.1 单细胞研究常见的四层问题</a></li><li><a href="#12">1.2 把问题写成一句话</a></li><li><a href="#13">1.3 推断单位：细胞不是生物学重复</a></li><li><a href="#14">1.4 发现与验证：两个数据集各司其职</a></li><li><a href="#15">1.5 本章的预期产出</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<p>读完这一章，你应该能用自己的话回答：</p>
+<ol>
+<li>我的研究是在<strong>描述细胞类型</strong>、<strong>比较组间差异</strong>，还是<strong>寻找机制</strong>？</li>
+<li>我的<strong>生物学重复</strong>是什么？是细胞、类器官，还是供者？</li>
+<li>我准备用哪个数据集做发现，哪个做验证？</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么第 1 步不写代码</span>
+单细胞流程的参数很多：QC 阈值、HVG 数量、聚类分辨率、DE 模型。没有一个明确的生物学问题，这些参数就只能“默认值一路点下去”，最后得到一张很好看但无法解释的图。<strong>先写问题，再选数据和参数</strong>，是避免 p-hacking 的第一步。</p>
+</div>
+<h2 id="11">1.1 单细胞研究常见的四层问题</h2>
+<table>
+<thead>
+<tr>
+<th>层次</th>
+<th>典型问题</th>
+<th>主要分析</th>
+<th>结论强度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>描述</td>
+<td>这个组织里有哪些细胞类型？</td>
+<td>QC、聚类、marker 注释</td>
+<td>探索性</td>
+</tr>
+<tr>
+<td>比较</td>
+<td>疾病/处理改变了哪些细胞类型或状态？</td>
+<td>组成分析、差异表达、通路</td>
+<td>关联性</td>
+</tr>
+<tr>
+<td>机制</td>
+<td>哪些调控因子/通讯/轨迹驱动变化？</td>
+<td>SCENIC、CellChat、RNA velocity、轨迹</td>
+<td>假说生成</td>
+</tr>
+<tr>
+<td>验证</td>
+<td>能否在独立队列/实验中重复？</td>
+<td>独立数据、smFISH、免疫组化、功能实验</td>
+<td>因果/可重复</td>
+</tr>
+</tbody>
+</table>
+<p>本教程只做前两层，但会刻意加入<strong>阳性对照</strong>和<strong>阴性结果</strong>。原因是：能把图画出来，不等于结论可信；一个没有对照的“差异基因列表”很容易是批次或伪重复的产物。</p>
+<h2 id="12">1.2 把问题写成一句话</h2>
+<p>一个可执行的问题至少包含五个要素：</p>
+<pre><code class="language-text">在【组织】中，【细胞类型/状态】在【疾病/处理】下，
+与【对照】相比，是否发生【表达/比例/状态】变化？
+推断单位是【供者/样本】，计划用【数据集】做发现/验证。
+</code></pre>
+<p>例如：</p>
+<blockquote>
+<p>在人胰岛 β 细胞中，2 型糖尿病（T2D）供者与对照供者相比，是否存在可重复的转录组差异？推断单位是供者，计划用 GSE81608 做发现，并用独立队列验证。</p>
+</blockquote>
+<p>这句话会直接决定：</p>
+<ul>
+<li>需要多少名供者（不是多少个细胞）；</li>
+<li>是否需要调整年龄、性别、BMI、胰岛纯度；</li>
+<li>应该做 pseudobulk 还是混合模型；</li>
+<li>结论能说到多强。</li>
+</ul>
+<h2 id="13">1.3 推断单位：细胞不是生物学重复</h2>
+<p>这是单细胞分析最重要的统计概念，没有之一。</p>
+<p>假设你有 6 名 T2D 供者、12 名对照供者，共 503 个 β 细胞。每个细胞当然是一个“观测”，但<strong>同一供者的细胞共享遗传背景、处理、批次和解离条件</strong>，它们不是独立的生物学重复。</p>
+<p>如果你把 503 个细胞当独立样本做 t 检验：</p>
+<ul>
+<li>n 从 16 变成 503，标准误被严重低估；</li>
+<li>p 值会非常小，哪怕真实效应为零；</li>
+<li>性别、年龄、批次等供者级差异会被误判为“疾病效应”。</li>
+</ul>
+<p>本教程会用一个真实的反例展示：同样的数据，<strong>细胞水平朴素检验得到 1,217 个“显著”基因，供者水平 pseudobulk 得到 0 个</strong>。这不是代码 bug，而是统计单位选错了。</p>
+<div class="callout expected">
+<p><span class="callout-title">本教程的推断单位</span>
+- GSE84133：4 名供者；只做图谱和注释，不做疾病组间统计。
+- GSE81608：18 名供者；pseudobulk 使用其中 16 名有 ≥10 个 β 细胞的供者。
+- 所有疾病比较的 n 是<strong>供者数</strong>，不是细胞数。</p>
+</div>
+<h2 id="14">1.4 发现与验证：两个数据集各司其职</h2>
+<p>本教程使用两个数据集，不是因为“数据越多越好”，而是因为它们回答不同问题：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133</th>
+<th>GSE81608</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>角色</td>
+<td>发现/图谱</td>
+<td>疾病比较</td>
+</tr>
+<tr>
+<td>供者</td>
+<td>4（3 对照，1 T2D）</td>
+<td>18（12 对照，6 T2D）</td>
+</tr>
+<tr>
+<td>细胞</td>
+<td>8,569</td>
+<td>1,600</td>
+</tr>
+<tr>
+<td>数据</td>
+<td>inDrop UMI counts</td>
+<td>gene-level RPKM</td>
+</tr>
+<tr>
+<td>用途</td>
+<td>聚类、注释、组成描述</td>
+<td>T2D vs 对照 pseudobulk DE</td>
+</tr>
+</tbody>
+</table>
+<p>关键判断：<strong>GSE84133 只有 1 名 T2D 供者</strong>。如果把 D4 和 D1–D3 做差异表达，你得到的是“D4 供者 vs 其他供者”，不是“T2D vs 对照”。所以疾病分析必须换数据集。</p>
+<h2 id="15">1.5 本章的预期产出</h2>
+<p>在继续之前，你应该在笔记里写下：</p>
+<ul>
+<li>[ ] 一句话问题（组织、细胞、比较、推断单位）；</li>
+<li>[ ] 发现数据集与验证数据集；</li>
+<li>[ ] 你关心的主要细胞类型（本教程：β 细胞）；</li>
+<li>[ ] 你准备调整的供者级协变量（年龄、性别；理想情况还有 BMI、HbA1c、胰岛纯度）；</li>
+<li>[ ] 你预期的结论强度（描述/关联/因果）。</li>
+</ul>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：为什么不能把 503 个 β 细胞当成 503 个独立样本？</p>
+<p><strong>Q2</strong>：GSE84133 有 4 名供者，为什么不能做 T2D vs 对照？</p>
+<p><strong>Q3</strong>：如果导师问你“你的 n 是多少”，你应该回答细胞数还是供者数？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 同一供者的细胞高度相关，不满足独立同分布；真正的生物学重复是供者。
+2. 只有 1 名 T2D 供者，疾病状态与供者完全共线，无法区分疾病效应和供者/批次效应。
+3. 疾病比较时回答供者数；描述细胞类型时可以说细胞数，但要同时报告供者数。
+
+</details>
+</div>
+<div class="callout warn">
+<p><span class="callout-title">常见误区</span>
+- “细胞越多，n 越大”——细胞数增加的是精度，不是生物学重复数。
+- “先跑完聚类再想问题”——聚类结果会反过来诱导你编故事。
+- “公共数据没有批次”——公共数据往往批次更多，只是你没看到。</p>
+</div>
+<h2 id="_2">下一步</h2>
+<p>第 2 步会把这些原则落到具体数据库：去哪里找数据、看哪些 metadata、如何判断一个数据集能不能支撑你的问题。</p>
+  </article>
+  <nav class="pager"><a class="pager-link next" href="../chapters/databases.html"><span>下一章</span><b>2. 数据库检索：如何找到“能用的”公共数据</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11. 结果解读：阴性结果、阳性对照与可发表的表述 · 单细胞学习站</title>
+<meta name="description" content="区分“没有检出”与“没有效应”；用阳性对照、p 值诊断和效应量组织一段可发表的 Results。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="interpretation">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 11 步 · 45 min</div>
+  <h1>结果解读：阴性结果、阳性对照与可发表的表述</h1>
+  <p class="chapter-lead">区分“没有检出”与“没有效应”；用阳性对照、p 值诊断和效应量组织一段可发表的 Results。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="interpretation">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#111-vs">11.1 可以说 vs 不能说</a></li><li><a href="#112">11.2 证据强度表</a></li><li><a href="#113-results">11.3 一段可发表的 Results 示例</a></li><li><a href="#114-limitations">11.4 Limitations 应该怎么写</a></li><li><a href="#115">11.5 如果审稿人说“你们为什么不用细胞水平检验”</a></li><li><a href="#_4">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>能区分“没有统计学显著”与“没有生物学效应”；</li>
+<li>会用阳性对照/阴性对照支撑结论；</li>
+<li>能写出一段不夸大的 Results 和 Limitations。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么阴性结果也值得写</span>
+阴性结果告诉我们“当前证据不足以支持某个效应”，这对后续样本量设计和假说修正很重要。把 0 个基因包装成“T2D 没有影响”，或者悄悄换阈值直到显著，都会损害研究的可信度。</p>
+</div>
+<h2 id="111-vs">11.1 可以说 vs 不能说</h2>
+<h3 id="_2">可以说</h3>
+<ul>
+<li>在这份数据中，人类胰岛包含 α、β、δ、PP、腺泡、导管、内皮、星状、巨噬、肥大、Schwann 等细胞类型；marker 注释与作者标签高度一致（ARI 0.968）。</li>
+<li>β 细胞存在 ER 应激相关状态（DDIT3/HSPA5/HERPUD1 高表达），与 Baron 原文报道的 β 异质性一致。</li>
+<li>在 GSE81608 的 16 名供者中，未检出 β 细胞 T2D vs 对照的全局表达差异；β 比例差异也无统计学意义（p=0.494）。</li>
+<li>细胞水平检验会产生大量假阳性；pseudobulk/混合模型是更合适的推断方式。</li>
+</ul>
+<h3 id="_3">不能说</h3>
+<ul>
+<li>“T2D 对 β 细胞没有影响”——阴性结果不等于无效应。</li>
+<li>“我们发现了 T2D 的关键基因”——本分析没有显著基因。</li>
+<li>“β 比例在 T2D 中下降”——p=0.494，且受分选/纯度影响。</li>
+<li>“GSE84133 的 D4 与对照的差异是糖尿病效应”——只有 1 名 T2D 供者，完全与供者/批次共线。</li>
+</ul>
+<h2 id="112">11.2 证据强度表</h2>
+<table>
+<thead>
+<tr>
+<th>结论</th>
+<th>证据</th>
+<th>强度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11 类胰岛/胰腺细胞</td>
+<td>聚类 + marker + ARI 0.968</td>
+<td>中等（描述性）</td>
+</tr>
+<tr>
+<td>β 细胞 ER 应激亚群</td>
+<td>DDIT3/HSPA5/HERPUD1 + 作者异质性</td>
+<td>中等（关联）</td>
+</tr>
+<tr>
+<td>T2D β 比例下降</td>
+<td>35.1% vs 28.9%，p=0.494</td>
+<td>不支持</td>
+</tr>
+<tr>
+<td>T2D β 全局表达差异</td>
+<td>pseudobulk 0/9,929；阳性对照 3,086</td>
+<td>不支持（本数据/本模型）</td>
+</tr>
+<tr>
+<td>T2D 对 β 细胞无影响</td>
+<td>阴性结果</td>
+<td><strong>不能下结论</strong></td>
+</tr>
+</tbody>
+</table>
+<h2 id="113-results">11.3 一段可发表的 Results 示例</h2>
+<blockquote>
+<p>“We re-analysed 1,600 single cells from 18 donors (12 non-diabetic, 6 T2D). After donor-level pseudobulk aggregation, 16 donors with at least 10 β cells were retained (10 control, 6 T2D). Using a linear model adjusted for age and sex, no gene passed FDR &lt; 0.05 (0/9,929; minimum FDR = 0.95). The p-value distribution was consistent with the null (QQ plot). As a positive control, the same pipeline identified 3,086/11,053 genes differentially expressed between β and α cells (e.g., INS +10.05, GCG −8.79), indicating adequate power to detect strong cell-identity effects. We therefore conclude that this dataset does not provide evidence for a global β-cell transcriptional difference between T2D and control donors; the analysis cannot exclude smaller or cell-state-specific effects.”</p>
+</blockquote>
+<p>注意这段话做了四件事：</p>
+<ol>
+<li>说明数据和分析单位；</li>
+<li>报告阴性结果和最小 FDR；</li>
+<li>用阳性对照证明流程有效能；</li>
+<li>明确限制（不能排除小效应/状态特异效应）。</li>
+</ol>
+<h2 id="114-limitations">11.4 Limitations 应该怎么写</h2>
+<ul>
+<li>样本量：16 名供者、6 名 T2D，对中等效应效能不足；</li>
+<li>数据层级：RPKM 不是 counts，无法做 counts-based 模型；</li>
+<li>批次/混杂：年龄、性别、BMI、胰岛纯度、批次信息有限；</li>
+<li>细胞类型：只分析 β 细胞，未覆盖其他类型/状态；</li>
+<li>技术：无空液滴/双细胞/环境 RNA 校正；</li>
+<li>统计：pseudobulk 可能平均掉细胞状态异质性；</li>
+<li>验证：没有独立队列/蛋白/功能验证。</li>
+</ul>
+<figure><img alt="Selected beta genes" src="../figures/gse81608_beta_selected_genes.png" /><figcaption>β 身份基因与 ER 应激基因在 T2D/对照间均无显著差异（FDR 0.95–1.0）。这是“阴性结果”的直观呈现，不是“T2D 没有影响”。</figcaption></figure>
+
+<h2 id="115">11.5 如果审稿人说“你们为什么不用细胞水平检验”</h2>
+<p>可以回答：</p>
+<blockquote>
+<p>“细胞水平检验把同一供者的细胞视为独立重复，违反独立性假设，会低估标准误。我们使用供者水平 pseudobulk，并以阳性对照（β vs α）验证流程效能；细胞水平结果作为敏感性分析附在补充材料中，显示 1,217 个基因‘显著’，主要由伪重复驱动。”</p>
+</blockquote>
+<p>这比争论“哪个 p 值更小”更有说服力。</p>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：0 个显著基因，能不能说“T2D 对 β 细胞没有影响”？</p>
+<p><strong>Q2</strong>：阳性对照在论文里应该放主图还是补充图？</p>
+<p><strong>Q3</strong>：如果审稿人要求“再跑一个细胞水平 DE”，你怎么处理？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 不能。只能说“本数据/本模型未检出全局差异”，不能排除小效应/状态特异效应。
+2. 建议放主图或至少正文引用：它是“流程有检验效能”的关键证据；详细基因表可放补充。
+3. 可以作为敏感性分析报告，但同时说明伪重复问题，并坚持 pseudobulk 为主分析；不要用细胞水平 p 值替代主结论。
+
+</details>
+</div>
+<h2 id="_4">下一步</h2>
+<p>最后一步把项目变成“别人能重跑”的研究：目录、环境、随机种子、版本、检查清单，以及下一步的学习路线。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/de.html"><span>上一章</span><b>10. 差异表达：为什么必须做 pseudobulk</b></a><a class="pager-link next" href="../chapters/reproducibility.html"><span>下一章</span><b>12. 可复现性与下一步：把项目做成“能重跑”的研究</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

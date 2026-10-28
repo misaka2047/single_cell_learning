@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>单细胞研究范式入门 · 单细胞学习站</title>
+<meta name="description" content="面向医学研究生的单细胞公共数据逐步复现教程">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-base="" data-slug="index">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="full-report.html">完整分析报告</a></li>
+      <li><a class="" href="code.html">代码与数据</a></li>
+      <li><a href="downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <p class="eyebrow">医学研究生 · 单细胞入门</p>
+      <h1>从公共数据到<br><em>可复现结论</em></h1>
+      <p class="hero-lead">12 步 + 附录，把两个真实的人类胰岛公共数据集跑完：QC、聚类、注释、组成分析、pseudobulk 差异表达。每一步都告诉你：做什么、为什么、应该看到什么、结果怎么读。</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="chapters/paradigm.html">开始第 1 步 →</a>
+        <a class="btn btn-ghost" href="full-report.html">先看完整报告</a>
+      </div>
+      <p class="hero-note">12 步 + 附录 · 预计 6–8 小时 · 可分 3 次完成 · 所有结果均来自本机真实运行</p>
+    </div>
+    <div class="hero-panel" aria-label="关键结果">
+      <div class="hero-stat"><b>8,531</b><span>QC 后细胞</span></div>
+      <div class="hero-stat"><b>11</b><span>注释细胞类型</span></div>
+      <div class="hero-stat"><b>0 / 9,929</b><span>pseudobulk 显著基因</span></div>
+      <div class="hero-stat"><b>3,086</b><span>阳性对照显著基因</span></div>
+      <p class="hero-panel-note">0 个不是“失败”：阳性对照证明流程有检验效能。</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head">
+    <p class="eyebrow">先看结论</p>
+    <h2>这套教程想让你带走的三件事</h2>
+  </div>
+  <div class="three-grid">
+    <div class="info-card"><span class="info-icon">01</span><h3>先定推断单位</h3><p>细胞是观测单位，供者才是生物学重复。把 503 个 β 细胞当独立样本，会得到 1,217 个假阳性。</p></div>
+    <div class="info-card"><span class="info-icon">02</span><h3>每一步都有预期</h3><p>细胞数、基因数、聚类数、ARI、显著基因数都给出真实值；对不上时知道从哪里查。</p></div>
+    <div class="info-card"><span class="info-icon">03</span><h3>阴性结果也要解释</h3><p>GSE81608 的 T2D 全局差异不可检出；阳性对照和 QQ 图告诉你这不是流程坏了。</p></div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head split">
+    <div><p class="eyebrow">课程目录</p><h2>12 步 + 附录，从选题到可复现</h2></div>
+    <p class="section-note">建议按顺序；每章末尾有检查点和排错表；正文术语可悬停查看解释。</p>
+  </div>
+  <div class="course-grid"><a class="course-card" data-slug="paradigm" href="chapters/paradigm.html"><div class="course-card-top"><span class="course-num">1</span><span class="course-time">35 min</span></div><h3>研究范式：先写清楚你要回答的问题</h3><p>把“我想做单细胞”变成一个可检验的问题</p><span class="course-state" data-state="paradigm">未开始</span></a><a class="course-card" data-slug="databases" href="chapters/databases.html"><div class="course-card-top"><span class="course-num">2</span><span class="course-time">45 min</span></div><h3>数据库检索：如何找到“能用的”公共数据</h3><p>不是所有 GSE 都能支撑你的问题</p><span class="course-state" data-state="databases">未开始</span></a><a class="course-card" data-slug="download" href="chapters/download.html"><div class="course-card-top"><span class="course-num">3</span><span class="course-time">50 min</span></div><h3>下载与工程化：把 GEO 变成可分析的项目</h3><p>文件、校验、metadata 对齐，一个都不能少</p><span class="course-state" data-state="download">未开始</span></a><a class="course-card" data-slug="anndata" href="chapters/anndata.html"><div class="course-card-top"><span class="course-num">4</span><span class="course-time">45 min</span></div><h3>AnnData 与基因 ID：单细胞数据的“底盘”</h3><p>把 CSV/RPKM 变成 scanpy 能理解的对象</p><span class="course-state" data-state="anndata">未开始</span></a><a class="course-card" data-slug="qc" href="chapters/qc.html"><div class="course-card-top"><span class="course-num">5</span><span class="course-time">50 min</span></div><h3>QC：哪些细胞应该被删掉</h3><p>先看分布，再定阈值；不要机械套用 20% 线粒体</p><span class="course-state" data-state="qc">未开始</span></a><a class="course-card" data-slug="normalization" href="chapters/normalization.html"><div class="course-card-top"><span class="course-num">6</span><span class="course-time">45 min</span></div><h3>归一化与 HVG：把不同细胞放到同一把尺子上</h3><p>counts 和 RPKM 不能用同一套归一化</p><span class="course-state" data-state="normalization">未开始</span></a><a class="course-card" data-slug="clustering" href="chapters/clustering.html"><div class="course-card-top"><span class="course-num">7</span><span class="course-time">55 min</span></div><h3>降维与聚类：从 2 万个基因到一张 UMAP</h3><p>PCA、kNN、UMAP、Leiden，以及“聚类数 ≠ 细胞类型数”</p><span class="course-state" data-state="clustering">未开始</span></a><a class="course-card" data-slug="annotation" href="chapters/annotation.html"><div class="course-card-top"><span class="course-num">8</span><span class="course-time">50 min</span></div><h3>细胞类型注释：marker、标签与验证</h3><p>把 19 个簇变成 11 类细胞，并知道置信边界</p><span class="course-state" data-state="annotation">未开始</span></a><a class="course-card" data-slug="composition" href="chapters/composition.html"><div class="course-card-top"><span class="course-num">9</span><span class="course-time">40 min</span></div><h3>组成分析：比例变化到底说明了什么</h3><p>按供者算比例，不要把细胞混在一起算</p><span class="course-state" data-state="composition">未开始</span></a><a class="course-card" data-slug="de" href="chapters/de.html"><div class="course-card-top"><span class="course-num">10</span><span class="course-time">75 min</span></div><h3>差异表达：为什么必须做 pseudobulk</h3><p>同一个数据集，1,217 个“显著” vs 0 个显著</p><span class="course-state" data-state="de">未开始</span></a><a class="course-card" data-slug="interpretation" href="chapters/interpretation.html"><div class="course-card-top"><span class="course-num">11</span><span class="course-time">45 min</span></div><h3>结果解读：阴性结果、阳性对照与可发表的表述</h3><p>0 个显著基因，怎么写才不被审稿人挑错</p><span class="course-state" data-state="interpretation">未开始</span></a><a class="course-card" data-slug="reproducibility" href="chapters/reproducibility.html"><div class="course-card-top"><span class="course-num">12</span><span class="course-time">45 min</span></div><h3>可复现性与下一步：把项目做成“能重跑”的研究</h3><p>目录、环境、种子、版本、检查清单</p><span class="course-state" data-state="reproducibility">未开始</span></a><a class="course-card" data-slug="appendix" href="chapters/appendix.html"><div class="course-card-top"><span class="course-num">A</span><span class="course-time">参考</span></div><h3>附录：命令速查、文件地图与术语表</h3><p>卡住时先来这里查</p><span class="course-state" data-state="appendix">未开始</span></a></div>
+</section>
+
+<section class="section">
+  <div class="section-head"><p class="eyebrow">数据</p><h2>两个真实数据集，各司其职</h2></div>
+  <div class="dataset-grid">
+    <article class="dataset-card">
+      <div class="dataset-tag">发现 · 图谱</div>
+      <h3>GSE84133</h3>
+      <p class="dataset-sub">Baron et al., Cell Systems 2016</p>
+      <ul><li>4 名供者，8,569 个细胞</li><li>inDrop UMI counts，20,125 个基因</li><li>3 对照 + 1 T2D：只做图谱，不做疾病比较</li></ul>
+      <a class="text-link" href="chapters/download.html">看下载与处理 →</a>
+    </article>
+    <article class="dataset-card">
+      <div class="dataset-tag alt">验证 · 疾病</div>
+      <h3>GSE81608</h3>
+      <p class="dataset-sub">Xin et al., Cell Metabolism 2016</p>
+      <ul><li>18 名供者（12 对照 / 6 T2D）</li><li>1,600 个 α/β/δ/PP 细胞，RPKM</li><li>503 个 β 细胞；16 名供者用于 pseudobulk</li></ul>
+      <a class="text-link" href="chapters/de.html">看差异表达 →</a>
+    </article>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-head"><p class="eyebrow">怎么用</p><h2>不要一口气读完，按“做—对—读”循环</h2></div>
+  <div class="how-grid">
+    <div><b>1. 读目标</b><p>先看本章“要做什么”和“为什么”，不要先复制代码。</p></div>
+    <div><b>2. 跟着做</b><p>在项目根目录执行命令；每段代码都能在 <a href="code.html">代码与数据</a> 找到完整文件。</p></div>
+    <div><b>3. 对预期</b><p>把终端输出/图与“预期结果”对照；对不上先看排错表，不要继续往下跑。</p></div>
+    <div><b>4. 做检查点</b><p>能用自己的话回答检查点，再点“标记本章完成”。</p></div>
+  </div>
+</section>
+
+<section class="section cta-section">
+  <div>
+    <p class="eyebrow">准备好了吗</p>
+    <h2>先写清楚你的问题，再打开数据。</h2>
+    <p>第 1 步不写代码：用一句话说清楚“在什么组织、什么细胞、比较什么、推断单位是什么”。</p>
+  </div>
+  <a class="btn btn-primary" href="chapters/paradigm.html">进入第 1 步 →</a>
+</section>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="glossary.html">术语表</a> · <a href="full-report.html">完整报告</a> · <a href="code.html">代码与数据</a> · <a href="index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="assets/glossary-data.js"></script>
+<script src="assets/glossary.js"></script>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6. 归一化与 HVG：把不同细胞放到同一把尺子上 · 单细胞学习站</title>
+<meta name="description" content="理解 library size、log 变换和 HVG 的作用；对 counts 做 CP10k+log1p，对 RPKM 做 log2(x+1)。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="normalization">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 6 步 · 45 min</div>
+  <h1>归一化与 HVG：把不同细胞放到同一把尺子上</h1>
+  <p class="chapter-lead">理解 library size、log 变换和 HVG 的作用；对 counts 做 CP10k+log1p，对 RPKM 做 log2(x+1)。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="normalization">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#61">6.1 两种数据类型，两种做法</a></li><li><a href="#62-log">6.2 为什么 log</a></li><li><a href="#63-hvg-2-2">6.3 HVG：从 2 万个基因到 2 千个</a></li><li><a href="#64">6.4 常见错误</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>能区分 counts 与 RPKM/TPM 的归一化方式；</li>
+<li>解释为什么先 log 再选 HVG；</li>
+<li>复现两个数据集的 HVG=2,000 与 PCA。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么归一化是“隐形的地基”</span>
+每个细胞的测序深度不同。如果不归一化，高深度细胞的所有基因都“更高”，聚类会按建库质量而不是细胞类型分开。归一化就是把细胞放到同一把尺子上；但<strong>尺子选错</strong>（比如对 RPKM 再做 CP10k）会把真实差异也抹掉。</p>
+</div>
+<h2 id="61">6.1 两种数据类型，两种做法</h2>
+<table>
+<thead>
+<tr>
+<th>数据类型</th>
+<th>已经做了什么</th>
+<th>本教程的做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UMI counts（GSE84133）</td>
+<td>只数了 UMI，未按深度归一化</td>
+<td>每个细胞缩放到 1e4，再 <code>log1p</code></td>
+</tr>
+<tr>
+<td>RPKM（GSE81608）</td>
+<td>已按基因长度和测序深度归一化</td>
+<td>直接 <code>log2(x+1)</code></td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python"># counts
+sc.pp.normalize_total(adata, target_sum=1e4)
+sc.pp.log1p(adata)
+
+# RPKM
+adata.X.data = np.log2(adata.X.data + 1)
+</code></pre>
+<blockquote>
+<p><strong>不要</strong>对 RPKM 再做 CP10k；<strong>不要</strong>在 log 后的数据上再 <code>normalize_total</code>。顺序错了，HVG、PCA、DE 都会跟着错。</p>
+</blockquote>
+<h2 id="62-log">6.2 为什么 log</h2>
+<ul>
+<li>表达量跨越几个数量级；log 压缩极端值，让高表达基因不主导 PCA。</li>
+<li><code>log1p</code> 处理 0：<code>log1p(0)=0</code>，不会出现 <code>log(0)</code>。</li>
+<li>对 counts，<code>log1p(CP10k)</code> 是 Scanpy 的常用组合；对 RPKM，<code>log2(RPKM+1)</code> 是常见做法。</li>
+</ul>
+<h2 id="63-hvg-2-2">6.3 HVG：从 2 万个基因到 2 千个</h2>
+<p>HVG（highly variable genes）保留在细胞间变化大的基因，去掉“所有细胞都表达”或“都不表达”的基因。它降低噪声和计算量，但<strong>不改变生物学结论</strong>——前提是不要用 DE 结果来选 HVG。</p>
+<pre><code class="language-python">sc.pp.highly_variable_genes(
+    adata, n_top_genes=2000, batch_key=&quot;donor&quot;, flavor=&quot;seurat&quot;
+)
+adata = adata[:, adata.var[&quot;highly_variable&quot;]].copy()
+sc.pp.scale(adata, max_value=10)
+</code></pre>
+<ul>
+<li><code>batch_key="donor"</code>：让 HVG 在供者间更稳定，而不是被某个供者主导。</li>
+<li><code>flavor="seurat"</code>：按表达均值和离散度选；数据应是 log 后的。</li>
+<li><code>scale(max_value=10)</code>：z-score 每个基因，限制极端值；会把稀疏矩阵变稠密。</li>
+</ul>
+<p><strong>预期输出</strong>：</p>
+<pre><code class="language-text">HVGs: 2000
+</code></pre>
+<p>两个数据集都保留 2,000 个 HVG。</p>
+<h2 id="64">6.4 常见错误</h2>
+<table>
+<thead>
+<tr>
+<th>错误</th>
+<th>后果</th>
+<th>正确做法</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>对 RPKM 再做 CP10k</td>
+<td>双重归一化，差异被压缩</td>
+<td>RPKM 只做 log2(x+1)</td>
+</tr>
+<tr>
+<td>先 scale 再选 HVG</td>
+<td>HVG 被 z-score 影响</td>
+<td>先 HVG，再 scale</td>
+</tr>
+<tr>
+<td>用全部样本的 DE 基因选 HVG</td>
+<td>double dipping，p 值偏小</td>
+<td>预设基因集/独立数据</td>
+</tr>
+<tr>
+<td>不按 batch 选 HVG</td>
+<td>HVG 被单一批次主导</td>
+<td><code>batch_key="donor"</code></td>
+</tr>
+<tr>
+<td>对 log 数据再 normalize_total</td>
+<td>归一化错误</td>
+<td>检查 <code>adata.X.max()</code> 和分布</td>
+</tr>
+</tbody>
+</table>
+<div class="callout expected">
+<p><span class="callout-title">你应该看到</span>
+- <code>adata.var["highly_variable"].sum() == 2000</code>；
+- PCA 的 explained variance ratio 前几个主成分较高，随后下降；
+- <code>adata.X</code> 的数值范围大概在 -10 到 10（scale 后），不再是 counts。</p>
+</div>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：为什么 GSE81608 不需要 <code>normalize_total</code>？</p>
+<p><strong>Q2</strong>：HVG 选 2,000 个，会不会漏掉稀有细胞类型的 marker？</p>
+<p><strong>Q3</strong>：为什么先 HVG 再 scale，而不是反过来？</p>
+<details>
+<summary>参考答案</summary>
+
+1. RPKM 已经按基因长度和测序深度归一化；再做 CP10k 是双重归一化。
+2. 可能。HVG 是全局选择，稀有类型的 marker 可能不在前 2,000；可以用 marker 基因强制保留，或做全基因 DE。
+3. scale 会让所有基因均值为 0、方差为 1，改变 HVG 的均值-离散度关系；HVG 应在 log 后的原始尺度上选。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>有了归一化矩阵和 HVG，下一步做 PCA、kNN、UMAP、Leiden，把细胞分成簇。你会看到 19 个簇，但它们不是 19 种细胞类型。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/qc.html"><span>上一章</span><b>5. QC：哪些细胞应该被删掉</b></a><a class="pager-link next" href="../chapters/clustering.html"><span>下一章</span><b>7. 降维与聚类：从 2 万个基因到一张 UMAP</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

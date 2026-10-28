@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8. 细胞类型注释：marker、标签与验证 · 单细胞学习站</title>
+<meta name="description" content="用 canonical marker 和 dotplot 注释细胞类型，再用作者标签计算 ARI；GSE84133 达到 0.968。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="annotation">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 8 步 · 50 min</div>
+  <h1>细胞类型注释：marker、标签与验证</h1>
+  <p class="chapter-lead">用 canonical marker 和 dotplot 注释细胞类型，再用作者标签计算 ARI；GSE84133 达到 0.968。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="annotation">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#81-canonical-marker">8.1 Canonical marker</a></li><li><a href="#82">8.2 簇到类型的映射</a></li><li><a href="#83">8.3 用作者标签做独立验证</a></li><li><a href="#84">8.4 稀有类型：不要假装没看见</a></li><li><a href="#85">8.5 注释的常见错误</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>会用 dotplot/表达量给簇挑 marker；</li>
+<li>能把 19 个簇合并成 11 类细胞；</li>
+<li>会用独立标签（作者注释）计算 ARI，而不是自说自话。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么注释不能只看一个 marker</span>
+INS 高表达不一定是 β 细胞：可能是双细胞、环境 RNA、或胰岛素瘤。可靠注释需要<strong>一组 marker 相互印证</strong>，并结合簇的整体表达、作者标签、组织学/蛋白验证。注释是“有置信度的假说”，不是绝对真理。</p>
+</div>
+<h2 id="81-canonical-marker">8.1 Canonical marker</h2>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>关键 marker</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>β</td>
+<td>INS, IAPP, MAFA, NKX6-1, PDX1, UCN3, SLC2A2</td>
+</tr>
+<tr>
+<td>α</td>
+<td>GCG, IRX2, ARX, TTR</td>
+</tr>
+<tr>
+<td>δ</td>
+<td>SST, HHEX, LEPR</td>
+</tr>
+<tr>
+<td>PP（γ）</td>
+<td>PPY</td>
+</tr>
+<tr>
+<td>腺泡</td>
+<td>CPA1, CELA3A, PRSS1, AMY2A</td>
+</tr>
+<tr>
+<td>导管</td>
+<td>KRT19, CFTR, MUC1, TFF1；REG+：REG3A, OLFM4, REG1A</td>
+</tr>
+<tr>
+<td>内皮</td>
+<td>PECAM1, VWF, CDH5</td>
+</tr>
+<tr>
+<td>星状</td>
+<td>COL1A1, PDGFRB, RGS5, ACTA2</td>
+</tr>
+<tr>
+<td>巨噬</td>
+<td>CD68, LYZ, C1QA</td>
+</tr>
+<tr>
+<td>肥大</td>
+<td>TPSAB1, CPA3</td>
+</tr>
+<tr>
+<td>Schwann</td>
+<td>SOX10, PLP1, S100B</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-python">markers = {
+    &quot;Beta&quot;: [&quot;INS&quot;, &quot;IAPP&quot;, &quot;MAFA&quot;, &quot;NKX6-1&quot;, &quot;PDX1&quot;, &quot;UCN3&quot;],
+    &quot;Alpha&quot;: [&quot;GCG&quot;, &quot;IRX2&quot;, &quot;ARX&quot;, &quot;TTR&quot;],
+    &quot;Delta&quot;: [&quot;SST&quot;, &quot;HHEX&quot;, &quot;LEPR&quot;],
+    &quot;PP&quot;: [&quot;PPY&quot;],
+    &quot;Acinar&quot;: [&quot;CPA1&quot;, &quot;CELA3A&quot;, &quot;PRSS1&quot;],
+    &quot;Ductal&quot;: [&quot;KRT19&quot;, &quot;CFTR&quot;, &quot;MUC1&quot;, &quot;TFF1&quot;],
+}
+sc.pl.dotplot(adata, markers, groupby=&quot;leiden&quot;,
+              standard_scale=&quot;var&quot;, use_raw=True)
+</code></pre>
+<figure><img alt="Baron marker dotplot" src="../figures/baron_dotplot_celltype.png" /><figcaption>最终 11 类细胞的 marker dotplot。点大小=表达该基因的细胞比例，颜色=组内平均表达（按基因标准化）。</figcaption></figure>
+
+<h2 id="82">8.2 簇到类型的映射</h2>
+<table>
+<thead>
+<tr>
+<th>簇</th>
+<th>注释</th>
+<th>关键证据</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1, 3, 12</td>
+<td>β</td>
+<td>INS/IAPP/MAFA/NKX6-1/PDX1</td>
+</tr>
+<tr>
+<td>2</td>
+<td>β（ER 应激高）</td>
+<td>DDIT3, HSPA5, HERPUD1, TRIB3</td>
+</tr>
+<tr>
+<td>8, 9, 10</td>
+<td>α</td>
+<td>GCG, IRX2, ARX, TTR</td>
+</tr>
+<tr>
+<td>4</td>
+<td>δ</td>
+<td>SST, HHEX, LEPR</td>
+</tr>
+<tr>
+<td>13</td>
+<td>PP</td>
+<td>PPY</td>
+</tr>
+<tr>
+<td>0</td>
+<td>腺泡</td>
+<td>CPA1, CELA3A, PRSS1</td>
+</tr>
+<tr>
+<td>7, 11, 15, 18</td>
+<td>导管</td>
+<td>KRT19, CFTR, MUC1；18 为 REG+</td>
+</tr>
+<tr>
+<td>5</td>
+<td>星状</td>
+<td>COL1A1, PDGFRB, RGS5</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Schwann</td>
+<td>SOX10, PLP1</td>
+</tr>
+<tr>
+<td>14</td>
+<td>内皮</td>
+<td>PECAM1, VWF, CDH5</td>
+</tr>
+<tr>
+<td>16</td>
+<td>巨噬</td>
+<td>CD68, LYZ, C1QA</td>
+</tr>
+<tr>
+<td>17</td>
+<td>肥大</td>
+<td>TPSAB1, CPA3</td>
+</tr>
+</tbody>
+</table>
+<h2 id="83">8.3 用作者标签做独立验证</h2>
+<p>作者标签不是 ground truth，但它是一个<strong>独立于我们聚类和 marker 选择</strong>的参考。计算 ARI：</p>
+<pre><code class="language-python">from sklearn.metrics import adjusted_rand_score
+ari = adjusted_rand_score(adata.obs[&quot;author_label&quot;],
+                          adata.obs[&quot;cell_type&quot;])
+print(ari)   # 0.968
+</code></pre>
+<p><strong>预期输出</strong>：</p>
+<pre><code class="language-text">ARI vs author labels: 0.968
+</code></pre>
+<p>ARI 接近 1 说明两种分组高度一致；但要注意：</p>
+<ul>
+<li>ARI 高不代表注释“正确”，只代表和作者标签一致；</li>
+<li>作者标签也可能错，尤其是稀有类型/双细胞；</li>
+<li>要看混淆矩阵，而不是只看一个数。</li>
+</ul>
+<p>GSE84133 的混淆矩阵大致是：</p>
+<table>
+<thead>
+<tr>
+<th>预测 \ 作者</th>
+<th style="text-align: right;">acinar</th>
+<th style="text-align: right;">alpha</th>
+<th style="text-align: right;">beta</th>
+<th style="text-align: right;">delta</th>
+<th style="text-align: right;">ductal</th>
+<th style="text-align: right;">...</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Acinar</td>
+<td style="text-align: right;">940</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">...</td>
+</tr>
+<tr>
+<td>Alpha</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">2282</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">...</td>
+</tr>
+<tr>
+<td>Beta</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">2486</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">4</td>
+<td style="text-align: right;">...</td>
+</tr>
+<tr>
+<td>Ductal</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">12</td>
+<td style="text-align: right;">2</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1061</td>
+<td style="text-align: right;">...</td>
+</tr>
+</tbody>
+</table>
+<p>GSE81608 的 ARI = <strong>0.856</strong>，主要因为 α 细胞被拆成 5 个 Leiden 簇；合并后仍是 4 类。</p>
+<figure><img alt="Baron annotated UMAP" src="../figures/baron_umap_annotated.png" /><figcaption>注释后的 UMAP。左：11 类细胞；右：保留 β/ductal/stellate 的亚状态。</figcaption></figure>
+
+<h2 id="84">8.4 稀有类型：不要假装没看见</h2>
+<p>作者在 GSE84133 中标注了：</p>
+<ul>
+<li>ε 细胞：18 个；</li>
+<li>T 细胞：7 个。</li>
+</ul>
+<p>在当前 resolution 下，它们没有形成独立簇：ε 被 β 吸收，T 细胞被巨噬细胞簇吸收。这是<strong>样本量/分辨率的限制</strong>。正确写法是：</p>
+<blockquote>
+<p>“当前聚类未将 ε 细胞和 T 细胞分辨为独立群；作者标签中存在 18 个 ε 和 7 个 T 细胞，提示稀有类型需要更高分辨率或靶向富集验证。”</p>
+</blockquote>
+<p>不要为了“完整”硬说“我们鉴定了 ε 细胞”。</p>
+<div class="callout expected">
+<p><span class="callout-title">你应该看到</span>
+- GSE84133：11 类细胞；ARI 0.968；
+- GSE81608：4 类细胞；ARI 0.856；
+- dotplot 中 β 的 INS/IAPP、α 的 GCG、δ 的 SST、PP 的 PPY 清晰；
+- 没有把所有干细胞/免疫细胞强行归到一个“other”。</p>
+</div>
+<h2 id="85">8.5 注释的常见错误</h2>
+<table>
+<thead>
+<tr>
+<th>错误</th>
+<th>后果</th>
+<th>修复</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>用同一个 marker 聚类又“验证”</td>
+<td>循环论证</td>
+<td>用独立标签/蛋白验证</td>
+</tr>
+<tr>
+<td>只看一个 marker</td>
+<td>双细胞/环境 RNA 误判</td>
+<td>一组 marker + 簇整体表达</td>
+</tr>
+<tr>
+<td>把作者标签当 ground truth</td>
+<td>继承作者错误</td>
+<td>把它当参考，保留置信度</td>
+</tr>
+<tr>
+<td>强行解释每个亚簇</td>
+<td>过拟合噪声</td>
+<td>合并稳定亚群，报告不确定性</td>
+</tr>
+<tr>
+<td>忽略稀有类型</td>
+<td>漏掉重要细胞</td>
+<td>提高分辨率/靶向验证</td>
+</tr>
+</tbody>
+</table>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：ARI=0.968 说明你的注释一定正确吗？</p>
+<p><strong>Q2</strong>：为什么簇 2 被标成“β（ER 应激高）”，而不是一种新细胞类型？</p>
+<p><strong>Q3</strong>：如果作者标签和你的注释冲突，应该信谁？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 不。ARI 只说明与作者标签一致；作者标签也可能错，且 ARI 对稀有类型不敏感。
+2. 它仍表达 β 身份基因（INS/IAPP/MAFA），只是高表达 ER 应激基因；属于状态/亚群，不是独立类型。
+3. 先看 marker、双细胞评分、环境 RNA、组织学验证；作者标签是参考，不是最终裁决。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>有了细胞类型，下一步看比例：每个供者内各类型占多少。你会看到 Baron 的腺泡比例从 0.1% 到 23.4%，这更像胰岛纯度差异，而不是疾病。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/clustering.html"><span>上一章</span><b>7. 降维与聚类：从 2 万个基因到一张 UMAP</b></a><a class="pager-link next" href="../chapters/composition.html"><span>下一章</span><b>9. 组成分析：比例变化到底说明了什么</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>

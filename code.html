@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代码与数据 · 单细胞学习站</title>
+<meta name="description" content="本教程的全部可复现代码与数据说明">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-base="" data-slug="code">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="clustering" href="chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="full-report.html">完整分析报告</a></li>
+      <li><a class="active" href="code.html">代码与数据</a></li>
+      <li><a href="downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">资源</div>
+  <h1>代码与数据</h1>
+  <p class="chapter-lead">网站里的每个数字都来自这些脚本的真实运行。建议先读章节，再打开对应脚本；不要直接跑完所有代码而不看中间输出。</p>
+  <div class="chapter-actions">
+    <a class="btn btn-primary" href="downloads/single-cell-tutorial-code.zip">下载代码包（不含原始数据）</a>
+    <a class="btn btn-ghost" href="full-report.html">完整报告</a>
+  </div>
+</header>
+<div class="chapter-body">
+  <article class="prose">
+    <div class="callout note" markdown="1">
+**数据不在压缩包里。** 原始 GEO 文件约 60 MB，需按 [数据说明](code/DATA_README.md) 的 URL 下载；压缩包只含脚本、说明和报告。
+    </div>
+    <h2>脚本地图</h2>
+    <table><thead><tr><th>文件</th><th>作用</th></tr></thead><tbody><tr><td><a href="code/00_prepare_data.py">00_prepare_data.py</a></td><td>把 GEO CSV/RPKM 读成 AnnData，补 metadata，映射基因 ID</td></tr><tr><td><a href="code/01_baron_cluster.py">01_baron_cluster.py</a></td><td>GSE84133：QC、归一化、HVG、PCA、UMAP、Leiden</td></tr><tr><td><a href="code/02_baron_annotate.py">02_baron_annotate.py</a></td><td>GSE84133：marker 注释、ARI、细胞组成</td></tr><tr><td><a href="code/03_gse81608_cluster.py">03_gse81608_cluster.py</a></td><td>GSE81608：QC、log2、聚类</td></tr><tr><td><a href="code/04_gse81608_de.py">04_gse81608_de.py</a></td><td>GSE81608：注释、pseudobulk DE、阳性/阴性对照</td></tr><tr><td><a href="code/05_report_figures.py">05_report_figures.py</a></td><td>生成汇总指标和三种 DE 方法对照图</td></tr><tr><td><a href="code/06_session_info.py">06_session_info.py</a></td><td>记录软件版本</td></tr><tr><td><a href="code/07_build_html.py">07_build_html.py</a></td><td>把 REPORT.md 转成独立的完整 HTML 报告</td></tr><tr><td><a href="code/download_ranges.py">download_ranges.py</a></td><td>多线程 HTTP Range 下载 gzip</td></tr><tr><td><a href="code/run_all.ps1">run_all.ps1</a></td><td>Windows 一键按顺序运行</td></tr></tbody></table>
+    <h2>运行顺序</h2>
+    <pre><code>python -m pip install -r requirements.txt
+$env:NUMBA_DISABLE_INTEL_SVML = "1"   # Windows 兼容性 workaround
+
+python code/00_prepare_data.py
+python code/01_baron_cluster.py
+python code/02_baron_annotate.py
+python code/03_gse81608_cluster.py
+python code/04_gse81608_de.py
+python code/05_report_figures.py
+python code/06_session_info.py</code></pre>
+    <h2>你需要准备什么</h2>
+    <ul>
+      <li>Python 3.11–3.13；按 <code>requirements.txt</code> 安装依赖。</li>
+      <li>至少 4 GB 内存；本教程的 h5ad 中间文件合计约 1.2 GB。</li>
+      <li>能访问 NCBI FTP；下载慢时用 <code>code/download_ranges.py</code>。</li>
+    </ul>
+    <div class="callout warn" markdown="1">
+**不要跳过 metadata 核对。** 分组、供者、细胞数对不上时，后面的所有图和统计都会错；先读 `GSE*_series_matrix.txt.gz` 的 `!Sample_characteristics_ch1`。
+    </div>
+  </article>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="glossary.html">术语表</a> · <a href="full-report.html">完整报告</a> · <a href="code.html">代码与数据</a> · <a href="index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="assets/glossary-data.js"></script>
+<script src="assets/glossary.js"></script>
+<script src="assets/search-index.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

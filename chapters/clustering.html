@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7. 降维与聚类：从 2 万个基因到一张 UMAP · 单细胞学习站</title>
+<meta name="description" content="跑通标准降维聚类流程，理解 resolution 和批次的影响；GSE84133 得到 19 个簇，GSE81608 得到 8 个簇。">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body data-base="../" data-slug="clustering">
+<a class="skip" href="#main">跳到正文</a>
+
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu-btn" aria-label="打开目录" aria-expanded="false">☰</button>
+  <a class="topbar-brand" href="../index.html">scRNA<span>·</span>学习站</a>
+  <div class="search-wrap">
+    <input id="site-search" type="search" placeholder="搜索章节、关键词…" autocomplete="off" aria-label="搜索">
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <div class="topbar-meta"><span id="topbar-progress">0 / 0</span></div>
+</header>
+
+
+<aside class="sidebar" id="sidebar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">sc</span>
+    <span class="brand-text"><b>单细胞学习站</b><small>从公共数据到可复现结论</small></span>
+  </a>
+  <div class="side-progress">
+    <div class="side-progress-head"><span>学习进度</span><b id="progress-text">0 / 13</b></div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+  </div>
+  <nav class="side-nav" aria-label="课程目录">
+    <p class="side-label">课程</p>
+    <ol><li><a class="chapter-link" data-slug="paradigm" href="../chapters/paradigm.html"><span class="nav-num">1</span><span class="nav-title">研究范式：先写清楚你要回答的问题</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="databases" href="../chapters/databases.html"><span class="nav-num">2</span><span class="nav-title">数据库检索：如何找到“能用的”公共数据</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="download" href="../chapters/download.html"><span class="nav-num">3</span><span class="nav-title">下载与工程化：把 GEO 变成可分析的项目</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="anndata" href="../chapters/anndata.html"><span class="nav-num">4</span><span class="nav-title">AnnData 与基因 ID：单细胞数据的“底盘”</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="qc" href="../chapters/qc.html"><span class="nav-num">5</span><span class="nav-title">QC：哪些细胞应该被删掉</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="normalization" href="../chapters/normalization.html"><span class="nav-num">6</span><span class="nav-title">归一化与 HVG：把不同细胞放到同一把尺子上</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link active" data-slug="clustering" href="../chapters/clustering.html"><span class="nav-num">7</span><span class="nav-title">降维与聚类：从 2 万个基因到一张 UMAP</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="annotation" href="../chapters/annotation.html"><span class="nav-num">8</span><span class="nav-title">细胞类型注释：marker、标签与验证</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="composition" href="../chapters/composition.html"><span class="nav-num">9</span><span class="nav-title">组成分析：比例变化到底说明了什么</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="de" href="../chapters/de.html"><span class="nav-num">10</span><span class="nav-title">差异表达：为什么必须做 pseudobulk</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="interpretation" href="../chapters/interpretation.html"><span class="nav-num">11</span><span class="nav-title">结果解读：阴性结果、阳性对照与可发表的表述</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="reproducibility" href="../chapters/reproducibility.html"><span class="nav-num">12</span><span class="nav-title">可复现性与下一步：把项目做成“能重跑”的研究</span><span class="nav-dot" aria-hidden="true"></span></a></li><li><a class="chapter-link" data-slug="appendix" href="../chapters/appendix.html"><span class="nav-num">A</span><span class="nav-title">附录：命令速查、文件地图与术语表</span><span class="nav-dot" aria-hidden="true"></span></a></li></ol>
+    <p class="side-label">资源</p>
+    <ul class="resource-list">
+      <li><a class="" href="../glossary.html">术语表（悬停注释）</a></li>
+      <li><a href="../full-report.html">完整分析报告</a></li>
+      <li><a class="" href="../code.html">代码与数据</a></li>
+      <li><a href="../downloads/single-cell-tutorial-code.zip">下载代码包</a></li>
+    </ul>
+  </nav>
+  <div class="side-foot">
+    <p>数据：GSE84133 · GSE81608</p>
+    <p>Python / Scanpy · 2026</p>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<main class="main" id="main">
+
+<header class="chapter-hero">
+  <div class="chapter-kicker">第 7 步 · 55 min</div>
+  <h1>降维与聚类：从 2 万个基因到一张 UMAP</h1>
+  <p class="chapter-lead">跑通标准降维聚类流程，理解 resolution 和批次的影响；GSE84133 得到 19 个簇，GSE81608 得到 8 个簇。</p>
+  <p class="gloss-hint">提示：正文中带虚线下划线的术语可悬停（或点击）查看简要解释；完整列表见 <a href="../glossary.html">术语表</a>。</p>
+  <div class="chapter-actions">
+    <button class="btn btn-primary" id="mark-complete" data-slug="clustering">标记本章完成</button>
+    <button class="btn btn-ghost" onclick="window.print()">打印本章</button>
+  </div>
+</header>
+<div class="chapter-body">
+  <details class="chapter-toc" open><summary>本章内容</summary><ol><li><a href="#_1">本章目标</a></li><li><a href="#71">7.1 标准顺序</a></li><li><a href="#72">7.2 本教程的结果</a></li><li><a href="#73-resolution">7.3 怎么选 resolution</a></li><li><a href="#74">7.4 批次：什么时候校正，什么时候不要</a></li><li><a href="#75">7.5 预期结果与排错</a></li><li><a href="#_2">下一步</a></li></ol></details>
+  <article class="prose">
+    <h2 id="_1">本章目标</h2>
+<ol>
+<li>理解 PCA → kNN → UMAP → Leiden 的顺序和每个参数；</li>
+<li>能解释“19 个簇不是 19 种细胞类型”；</li>
+<li>判断什么时候需要批次校正，什么时候不要。</li>
+</ol>
+<div class="callout why">
+<p><span class="callout-title">为什么先 PCA 再聚类</span>
+直接在 2 万个基因上算距离，会被噪声和高表达基因主导。PCA 把表达压缩到几十个主成分，保留主要变异；kNN 在低维空间构建“细胞相似图”；Leiden 在图上找社区。UMAP 只是把图可视化，<strong>不参与聚类</strong>。</p>
+</div>
+<h2 id="71">7.1 标准顺序</h2>
+<pre><code class="language-python">sc.tl.pca(adata, n_comps=50, svd_solver=&quot;arpack&quot;, random_state=42)
+sc.pp.neighbors(adata, n_neighbors=15, n_pcs=30, random_state=42)
+sc.tl.umap(adata, random_state=42)
+sc.tl.leiden(adata, resolution=0.6, random_state=42,
+             flavor=&quot;igraph&quot;, n_iterations=2, directed=False)
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>作用</th>
+<th>本教程</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>n_comps=50</code></td>
+<td>PCA 保留 50 个主成分</td>
+<td>取前 30 个做 kNN</td>
+</tr>
+<tr>
+<td><code>n_neighbors=15</code></td>
+<td>每个细胞的邻居数</td>
+<td>15；太大合并小簇，太小碎片化</td>
+</tr>
+<tr>
+<td><code>resolution=0.6</code></td>
+<td>Leiden 粒度</td>
+<td>Baron 0.6；GSE81608 0.4</td>
+</tr>
+<tr>
+<td><code>random_state=42</code></td>
+<td>随机种子</td>
+<td>保证可复现</td>
+</tr>
+</tbody>
+</table>
+<h2 id="72">7.2 本教程的结果</h2>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>GSE84133</th>
+<th>GSE81608</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resolution</td>
+<td>0.6</td>
+<td>0.4</td>
+</tr>
+<tr>
+<td>簇数</td>
+<td><strong>19</strong></td>
+<td><strong>8</strong></td>
+</tr>
+<tr>
+<td>合并后类型</td>
+<td>11</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>GSE84133 的 19 个簇：</p>
+<ul>
+<li>β 细胞 4 簇（1、2、3、12），其中簇 2 高表达 DDIT3/HSPA5/HERPUD1，是 ER 应激状态；</li>
+<li>α 细胞 3 簇（8、9、10）；</li>
+<li>ductal 4 簇（7、11、15、18），其中 18 是 REG+；</li>
+<li>其余为 acinar、δ、PP、stellate、schwann、endothelial、macrophage、mast。</li>
+</ul>
+<p>GSE81608 的 8 个簇：</p>
+<ul>
+<li>α 细胞被拆成 5 簇（0、2、3、4、5）；</li>
+<li>β、δ、PP 各 1 簇；</li>
+<li>合并注释为 4 类。</li>
+</ul>
+<p><strong>聚类数不等于细胞类型数。</strong> 簇是“表达相似的细胞群”，可能是同一类型的亚状态、供者/批次差异，也可能是过聚类。必须用 marker 注释后再决定合并。</p>
+<figure><img alt="Baron UMAP" src="../figures/baron_umap_overview.png" /><figcaption>GSE84133 的 UMAP：按 Leiden 簇、供者、疾病、作者标签着色。可以看到 D4（T2D）在 β 细胞区域富集，但这与供者共线，不能直接解释为疾病效应。</figcaption></figure>
+
+<h2 id="73-resolution">7.3 怎么选 resolution</h2>
+<ul>
+<li>先跑 0.4 / 0.6 / 0.8 三个值，比较簇数和 marker；</li>
+<li>如果多个 resolution 下同一群细胞稳定分开，说明结构稳健；</li>
+<li>如果只在 1.2 出现、marker 又不特异，可能是过聚类；</li>
+<li>不要用“能讲出故事”的 resolution 反推参数。</li>
+</ul>
+<p>一个实用检查：</p>
+<pre><code class="language-python">for res in [0.4, 0.6, 0.8, 1.0]:
+    sc.tl.leiden(adata, resolution=res, key_added=f&quot;leiden_{res}&quot;,
+                 flavor=&quot;igraph&quot;, n_iterations=2, directed=False)
+    print(res, adata.obs[f&quot;leiden_{res}&quot;].nunique())
+</code></pre>
+<h2 id="74">7.4 批次：什么时候校正，什么时候不要</h2>
+<p>本教程<strong>没有</strong>做 Harmony/ComBat，因为 GSE84133 的 T2D 状态与 D4 供者完全共线：</p>
+<ul>
+<li>如果按供者做 Harmony，可能把 D4 的疾病信号一起删掉；</li>
+<li>如果观察到同一细胞类型按供者分开，先判断是技术批次还是真实个体差异；</li>
+<li>跨数据集整合才考虑 Harmony/scVI/BBKNN，并且要在<strong>不包含疾病标签</strong>的嵌入上评估混合。</li>
+</ul>
+<blockquote>
+<p>经验法则：批次校正的目的是让同一细胞类型在不同批次对齐，不是让疾病分组消失。分组与批次共线时，“校正后差异消失”可能是过校正。</p>
+</blockquote>
+<h2 id="75">7.5 预期结果与排错</h2>
+<div class="callout expected">
+<p><span class="callout-title">你应该看到</span>
+- GSE84133：<code>leiden</code> 有 19 个类别，最大簇约 1,135 个细胞；
+- GSE81608：<code>leiden</code> 有 8 个类别，α 细胞占多数；
+- UMAP 上同类细胞聚在一起，但不同供者会有一定混合；
+- 没有“所有细胞挤成一团”或“每个细胞一个簇”。</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>现象</th>
+<th>可能原因</th>
+<th>处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>所有细胞一个簇</td>
+<td>未归一化/未 log，或 HVG 太少</td>
+<td>检查 <code>X</code> 分布、HVG 数</td>
+</tr>
+<tr>
+<td>每个供者一簇</td>
+<td>强批次效应</td>
+<td>检查 donor 着色；考虑 Harmony，但注意共线</td>
+</tr>
+<tr>
+<td>每个细胞一个簇</td>
+<td>resolution 太高/邻居太少</td>
+<td>降 resolution，增 n_neighbors</td>
+</tr>
+<tr>
+<td><code>LLVM ERROR: __svml_sqrtf16</code></td>
+<td>numba/llvmlite 在 Windows 的 SVML 问题</td>
+<td>设置 <code>NUMBA_DISABLE_INTEL_SVML=1</code></td>
+</tr>
+<tr>
+<td><code>ModuleNotFoundError: leidenalg</code></td>
+<td>未安装</td>
+<td><code>pip install leidenalg igraph</code></td>
+</tr>
+</tbody>
+</table>
+<div class="callout check">
+<p><span class="callout-title">检查点</span>
+<strong>Q1</strong>：UMAP 上的距离能直接当“分化距离”吗？</p>
+<p><strong>Q2</strong>：为什么 GSE81608 的 α 细胞被拆成 5 簇，却不代表 5 种 α 细胞？</p>
+<p><strong>Q3</strong>：什么情况下应该做 Harmony？本教程为什么不做？</p>
+<details>
+<summary>参考答案</summary>
+
+1. 不能。UMAP 主要保留局部邻接关系，全局距离/簇间距离不可靠；要看 marker 和独立验证。
+2. 可能是供者/技术差异或过聚类；marker 仍指向 α，合并为一种类型更合理。
+3. 当同一细胞类型在不同批次明显分开、且批次与生物学不共线时。本教程疾病与供者共线，校正可能删掉疾病信号，所以不做。
+
+</details>
+</div>
+<h2 id="_2">下一步</h2>
+<p>聚类只是“分组”。下一步用 marker 给每个簇命名，并用作者标签做独立验证；GSE84133 的 ARI 会达到 0.968。</p>
+  </article>
+  <nav class="pager"><a class="pager-link prev" href="../chapters/normalization.html"><span>上一章</span><b>6. 归一化与 HVG：把不同细胞放到同一把尺子上</b></a><a class="pager-link next" href="../chapters/annotation.html"><span>下一章</span><b>8. 细胞类型注释：marker、标签与验证</b></a></nav>
+</div>
+
+<footer class="footer">
+  <p>单细胞研究范式入门 · 基于 GSE84133 与 GSE81608 的真实再分析</p>
+  <p><a href="../glossary.html">术语表</a> · <a href="../full-report.html">完整报告</a> · <a href="../code.html">代码与数据</a> · <a href="../index.html">返回首页</a></p>
+</footer>
+</main>
+<script src="../assets/glossary-data.js"></script>
+<script src="../assets/glossary.js"></script>
+<script src="../assets/search-index.js"></script>
+<script src="../assets/app.js"></script>
+</body>
+</html>
